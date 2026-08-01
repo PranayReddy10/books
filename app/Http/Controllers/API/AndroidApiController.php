@@ -2097,6 +2097,8 @@ class AndroidApiController extends MainAPIController
                 'title'          => stripslashes($obj->title),
                 'description'    => stripslashes($obj->description),
                 'link_url'       => $obj->link_url ?: '',
+                'book_id'        => $obj->book_id ? (string)$obj->book_id : '',
+                'book_title'     => $obj->book_id ? stripslashes((string)\App\Books::where('id', $obj->book_id)->value('title')) : '',
                 'file_url'       => $obj->file_url,
                 'thumb_url'      => $obj->thumb_url ?: '',
                 'uploaded_by'    => $obj->uploaderName(),

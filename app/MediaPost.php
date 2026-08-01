@@ -10,7 +10,7 @@ class MediaPost extends Model
 
     protected $fillable = [
         'user_id', 'media_type', 'title', 'description',
-        'file_url', 'thumb_url', 'link_url', 'is_admin_upload',
+        'file_url', 'thumb_url', 'link_url', 'book_id', 'is_admin_upload',
         'show_views', 'allow_likes', 'allow_comments',
         'upload_status', 'reject_reason', 'status', 'view_count',
     ];
