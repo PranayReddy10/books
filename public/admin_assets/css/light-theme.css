@@ -1,0 +1,168 @@
+/* ============================================================
+   Light theme override for the admin panel.
+   Loaded AFTER style.css. Selectors are written to match or
+   exceed the specificity of the dark rules in style.css so the
+   light look actually wins (no !important-spam where avoidable).
+   Accent: #4a7dff
+   ============================================================ */
+
+:root{
+  --lt-accent:#4a7dff; --lt-accent-dark:#3a6bec;
+  --lt-bg:#f6f8fb; --lt-surface:#ffffff;
+  --lt-ink:#1f2937; --lt-muted:#6b7280; --lt-line:#e8ecf3;
+}
+
+/* ---- Base ---- */
+body, body.fixed-left { background:var(--lt-bg) !important; color:var(--lt-ink); }
+.content-page, .content-page > .content { background:var(--lt-bg) !important; }
+
+/* ---- Topbar (beats `.topbar .topbar-left` and `.navbar-default`) ---- */
+#wrapper .topbar .topbar-left,
+.topbar .topbar-left {
+  background:var(--lt-surface) !important;
+  border-top:3px solid #e32a3c !important;    /* keep the brand accent stripe */
+  border-bottom:1px solid var(--lt-line) !important;
+}
+#wrapper .navbar.navbar-default,
+.navbar.navbar-default, .navbar-default {
+  background-color:var(--lt-surface) !important;
+  border-left:1px solid var(--lt-line) !important;
+  box-shadow:0 1px 3px rgba(31,41,55,.06) !important;
+}
+.navbar-custom { background:var(--lt-surface) !important; }
+.navbar-custom .nav-link,
+.navbar-custom .page-title,
+.button-menu-mobile i,
+.navbar .nav-user,
+.navbar-default .nav-link,
+.navbar-default .topbar-right-menu li a { color:var(--lt-ink) !important; }
+
+/* ---- Sidebar (beats `.side-menu{background:#0c1017}` at every level) ---- */
+#wrapper .left.side-menu,
+#wrapper .side-menu,
+.left.side-menu, .side-menu {
+  background:var(--lt-surface) !important;
+  border-right:1px solid var(--lt-line) !important;
+  box-shadow:0 5px 10px rgba(31,41,55,.04) !important;
+}
+.sidebar-inner, .slimscrollleft { background:var(--lt-surface) !important; }
+/* links: beats `#sidebar-menu > ul > li > a{color:#f9f9f9}` */
+#wrapper .side-menu #sidebar-menu > ul > li > a,
+.side-menu #sidebar-menu > ul > li > a,
+#sidebar-menu > ul > li > a {
+  color:#4b5563 !important; border-left:3px solid transparent !important;
+}
+#wrapper .side-menu #sidebar-menu > ul > li > a:hover,
+.side-menu #sidebar-menu > ul > li > a:hover,
+#sidebar-menu > ul > li > a:hover {
+  background:#f2f5fb !important; color:var(--lt-accent) !important;
+  border-left-color:var(--lt-accent) !important;
+}
+.side-menu #sidebar-menu > ul > li > a i,
+#sidebar-menu > ul > li > a i { color:inherit !important; }
+/* active item */
+#wrapper #sidebar-menu li.active > a,
+#sidebar-menu li.active > a,
+.side-menu #sidebar-menu li.active > a {
+  background:#eef3ff !important; color:var(--lt-accent) !important;
+  border-left-color:var(--lt-accent) !important;
+}
+/* submenu items */
+.side-menu #sidebar-menu ul ul li a,
+#sidebar-menu ul ul li a { color:#6b7280 !important; background:transparent !important; }
+.side-menu #sidebar-menu ul ul li a:hover,
+#sidebar-menu ul ul li a:hover { color:var(--lt-accent) !important; }
+.side-menu .menu-title, #sidebar-menu .menu-title { color:#9ca3af !important; }
+.user-details, .user-details a, .user-details .user-name, .user-details p { color:var(--lt-ink) !important; }
+
+/* ---- Cards (beats `.card-box{background:#1a2234}`) ---- */
+.card-box {
+  background-color:var(--lt-surface) !important;
+  border:1px solid var(--lt-line) !important;
+  border-radius:12px !important;
+  box-shadow:0 1px 3px rgba(31,41,55,.04) !important;
+  color:var(--lt-ink);
+}
+.header-title { color:var(--lt-ink) !important; }
+.text-muted { color:var(--lt-muted) !important; }
+
+/* Old dark-theme leftovers that forced white text -> make readable */
+.card-box [style*="color: #fff"],
+.card-box [style*="color:#fff"],
+.card-box [style*="color: #f9f9f9"],
+.card-box [style*="color:#f9f9f9"] { color:var(--lt-ink) !important; }
+
+/* ---- Tables ---- */
+.table { color:var(--lt-ink); }
+.table thead th { color:var(--lt-muted); border-bottom:1px solid var(--lt-line); }
+.table td, .table th { border-top:1px solid var(--lt-line); }
+.table-hover tbody tr:hover { background:#f7f9fd; }
+
+/* ---- Buttons ---- */
+.btn-primary, .btn-custom { background:var(--lt-accent) !important; border-color:var(--lt-accent) !important; color:#fff !important; }
+.btn-primary:hover, .btn-custom:hover { background:var(--lt-accent-dark) !important; border-color:var(--lt-accent-dark) !important; }
+
+/* ---- Forms ---- */
+.form-control { background:#fff !important; border:1px solid #d5dbe3 !important; color:var(--lt-ink) !important; border-radius:8px; }
+.form-control:focus { border-color:var(--lt-accent) !important; box-shadow:0 0 0 3px rgba(74,125,255,.12) !important; }
+.col-form-label, label { color:#374151 !important; }
+.select2-container--default .select2-selection--multiple,
+.select2-container--default .select2-selection--single { border:1px solid #d5dbe3 !important; border-radius:8px !important; }
+.app-search input[type="text"] { background:#f2f5fb !important; color:var(--lt-ink) !important; border-radius:8px; }
+.app-search input[type="text"]::placeholder { color:#9aa4b2 !important; }
+
+/* ---- Pagination ---- */
+.pagination .page-link { color:var(--lt-accent); border-color:var(--lt-line); }
+.pagination .page-item.active .page-link { background:var(--lt-accent); border-color:var(--lt-accent); }
+
+/* ============================================================
+   STRONGER OVERRIDES (round 3)
+   Root backgrounds + in-page text colors that the template
+   hard-codes to near-white (#f9f9f9 / #fff), which is invisible
+   on a light background. Force dark, readable text everywhere.
+   ============================================================ */
+
+/* Root: template sets body/html to #0c111b (near-black) */
+html, body, body.fixed-left {
+  background:#f6f8fb !important;
+  color:#1f2937 !important;
+}
+
+/* Page + section headings the theme sets to #f9f9f9 */
+.page-title,
+.header-title,
+.col-form-label,
+.page-title-box .page-title { color:#1f2937 !important; }
+
+/* Generic content text safety net: any element whose color the
+   theme forced to near-white, inside the content area, made dark.
+   (Scoped to .content-page so we don't touch intentionally-white
+   text on colored badges/buttons.) */
+.content-page, .content-page p, .content-page h1, .content-page h2,
+.content-page h3, .content-page h4, .content-page h5, .content-page h6,
+.content-page span, .content-page label, .content-page td, .content-page th,
+.content-page li, .content-page a:not(.btn) { color:#1f2937; }
+
+/* Keep white text where it SHOULD stay white (badges, colored buttons) */
+.badge, .btn, .btn * { color:#fff; }
+.badge-light, .btn-light { color:#1f2937 !important; }
+
+/* SIDEBAR — maximum specificity, defeats inline-ish + JS classes.
+   If your sidebar element also has an inline style="background:#..."
+   these still can't override that; the Inspect check will confirm. */
+body #wrapper .left.side-menu,
+body #wrapper .side-menu,
+html body .left.side-menu,
+html body .side-menu,
+.left.side-menu .sidebar-inner,
+.side-menu .sidebar-inner {
+  background:#ffffff !important;
+  background-color:#ffffff !important;
+}
+html body #wrapper .side-menu #sidebar-menu > ul > li > a,
+html body #sidebar-menu > ul > li > a {
+  color:#4b5563 !important;
+}
+html body #sidebar-menu > ul > li > a i { color:#6b7280 !important; }
+html body #sidebar-menu li.active > a,
+html body #sidebar-menu li.active > a i { color:#4a7dff !important; }

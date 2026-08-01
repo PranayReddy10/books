@@ -1,0 +1,14 @@
+[20-Jul-2026 12:54:38 America/Boise] PHP Warning:  Undefined array key "host" in /home4/globalqu/public_html/jntuapp/jntubooksandupdates/public/install/index.php on line 330
+[20-Jul-2026 12:54:38 America/Boise] PHP Warning:  Undefined array key "user" in /home4/globalqu/public_html/jntuapp/jntubooksandupdates/public/install/index.php on line 331
+[20-Jul-2026 12:54:38 America/Boise] PHP Warning:  Undefined array key "pass" in /home4/globalqu/public_html/jntuapp/jntubooksandupdates/public/install/index.php on line 332
+[20-Jul-2026 12:54:38 America/Boise] PHP Warning:  Undefined array key "name" in /home4/globalqu/public_html/jntuapp/jntubooksandupdates/public/install/index.php on line 333
+[20-Jul-2026 12:55:29 America/Boise] PHP Fatal error:  Uncaught mysqli_sql_exception: Table 'analytics' already exists in /home4/globalqu/public_html/jntuapp/jntubooksandupdates/public/install/index.php:442
+Stack trace:
+#0 /home4/globalqu/public_html/jntuapp/jntubooksandupdates/public/install/index.php(442): mysqli_query(Object(mysqli), '\nCREATE TABLE `...')
+#1 {main}
+  thrown in /home4/globalqu/public_html/jntuapp/jntubooksandupdates/public/install/index.php on line 442
+[20-Jul-2026 12:55:39 America/Boise] PHP Fatal error:  Uncaught mysqli_sql_exception: Table 'analytics' already exists in /home4/globalqu/public_html/jntuapp/jntubooksandupdates/public/install/index.php:442
+Stack trace:
+#0 /home4/globalqu/public_html/jntuapp/jntubooksandupdates/public/install/index.php(442): mysqli_query(Object(mysqli), '\nCREATE TABLE `...')
+#1 {main}
+  thrown in /home4/globalqu/public_html/jntuapp/jntubooksandupdates/public/install/index.php on line 442

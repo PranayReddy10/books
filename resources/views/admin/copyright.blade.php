@@ -1,0 +1,1 @@
+<footer class="footer text-right"> {{trans('words.copyright')}} © {{date('Y')}} <a href="http://www.jntubooks.in" target="_blank">jntubooks.in</a>. {{trans('words.all_rights')}}. </footer>

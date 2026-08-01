@@ -1,0 +1,13 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.jntuh.books",
+      "sha256_cert_fingerprints": [
+        "54:26:31:9A:49:AF:B5:E4:E2:43:8D:88:0B:27:67:30:7E:BB:1B:1B:EB:BD:71:61:1F:8E:7E:66:57:11:34:1F",
+        "D0:B6:CF:39:88:C5:51:86:6A:D8:F4:CC:36:60:12:19:9F:FB:24:E4:5F:E9:9D:84:29:DB:17:53:29:0D:54:AE"
+      ]
+    }
+  }
+]

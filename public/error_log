@@ -1,0 +1,5 @@
+[31-Jul-2026 10:58:36 Asia/Kolkata] PHP Fatal error:  Trait "Illuminate\Foundation\Auth\RegistersUsers" not found in /home4/globalqu/public_html/jntuapp/newjntuh/app/Http/Controllers/Auth/RegisterController.php on line 14
+[31-Jul-2026 11:02:48 Asia/Kolkata] PHP Fatal error:  Trait "Illuminate\Foundation\Auth\RegistersUsers" not found in /home4/globalqu/public_html/jntuapp/newjntuh/app/Http/Controllers/Auth/RegisterController.php on line 14
+[31-Jul-2026 11:05:39 Asia/Kolkata] PHP Fatal error:  Trait "Illuminate\Foundation\Auth\RegistersUsers" not found in /home4/globalqu/public_html/jntuapp/newjntuh/app/Http/Controllers/Auth/RegisterController.php on line 14
+[31-Jul-2026 11:07:45 Asia/Kolkata] PHP Fatal error:  Trait "Illuminate\Foundation\Auth\RegistersUsers" not found in /home4/globalqu/public_html/jntuapp/newjntuh/app/Http/Controllers/Auth/RegisterController.php on line 14
+[31-Jul-2026 11:08:01 Asia/Kolkata] PHP Fatal error:  Trait "Illuminate\Foundation\Auth\RegistersUsers" not found in /home4/globalqu/public_html/jntuapp/newjntuh/app/Http/Controllers/Auth/RegisterController.php on line 14
