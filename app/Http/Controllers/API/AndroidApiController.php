@@ -2516,7 +2516,12 @@ class AndroidApiController extends MainAPIController
                 {
                  $phone= $finduser->phone?$finduser->phone:'';       
                 
-                 $response[] = array('user_id' => $finduser->id,'name' => $finduser->name,'email' => $finduser->email,'phone' => $phone,'user_image' => $user_image,'msg' => trans('words.login_success'),'success'=>'1');
+                 if (empty($finduser->username)) {
+                    $finduser->username = generate_username($finduser->name, $finduser->email);
+                    $finduser->save();
+                 }
+                 $profile_complete = ($finduser->university && $finduser->department_id && $finduser->college) ? '1' : '0';
+                 $response[] = array('user_id' => $finduser->id,'name' => $finduser->name,'username' => $finduser->username ?: '','email' => $finduser->email,'phone' => $phone,'user_image' => $user_image,'profile_complete' => $profile_complete,'msg' => trans('words.login_success'),'success'=>'1');
                 }
         }
         else
@@ -2536,6 +2541,10 @@ class AndroidApiController extends MainAPIController
                 $user_obj->email = $email;         
                 $user_obj->password= bcrypt($password);  
                 $user_obj->phone= $phone?$phone:'';        
+                // Save the Google profile photo as the avatar (full URL) if sent.
+                if (!empty($get_data['user_image'])) {
+                    $user_obj->user_image = $get_data['user_image'];
+                }
                 $user_obj->save();
      
             }
@@ -2573,7 +2582,13 @@ class AndroidApiController extends MainAPIController
             }
             $phone= $user->phone?$user->phone:'';
 
-            $response[] = array('user_id' => $user_id,'name' => $user->name,'email' => $user->email,'phone' => $phone,'user_image' => $user_image,'msg' => trans('words.login_success'),'success'=>'1');
+            if (empty($user->username)) {
+                $user->username = generate_username($user->name, $user->email);
+                $user->save();
+            }
+            // Brand-new social user: never has university/dept/college yet.
+            $profile_complete = ($user->university && $user->department_id && $user->college) ? '1' : '0';
+            $response[] = array('user_id' => $user_id,'name' => $user->name,'username' => $user->username ?: '','email' => $user->email,'phone' => $phone,'user_image' => $user_image,'profile_complete' => $profile_complete,'msg' => trans('words.login_success'),'success'=>'1');
         }
 
  
@@ -2756,6 +2771,18 @@ class AndroidApiController extends MainAPIController
         $user_obj->name = $get_data['name'];          
         $user_obj->email = $get_data['email']; 
         $user_obj->phone = $get_data['phone'];
+
+        // Optional academic fields (used by the Google "complete profile" flow and
+        // the edit-profile screen). Only overwrite when a value is sent.
+        if (isset($get_data['university']) && $get_data['university'] !== '') {
+            $user_obj->university = $get_data['university'];
+        }
+        if (isset($get_data['department_id']) && $get_data['department_id'] !== '') {
+            $user_obj->department_id = $get_data['department_id'];
+        }
+        if (isset($get_data['college']) && $get_data['college'] !== '') {
+            $user_obj->college = $get_data['college'];
+        }
         
         if($get_data['password'])
         {
