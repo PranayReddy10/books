@@ -1277,3 +1277,80 @@ if (!function_exists('send_media_notification')) {
         return $response;
     }
 }
+
+if (!function_exists('admin_can')) {
+    /**
+     * RBAC permission check. Master admins (usertype 'Admin') always pass.
+     * Others are checked against their role's granted permissions.
+     * $permission is a "module.action" string, e.g. "books.edit".
+     *
+     * Results are cached per-request to avoid repeated queries.
+     */
+    function admin_can($permission)
+    {
+        $u = \Auth::user();
+        if (!$u) {
+            return false;
+        }
+        // Master admin: full access, always.
+        if ($u->usertype === 'Admin') {
+            return true;
+        }
+        // Non-admin app users never have admin access.
+        if ($u->usertype !== 'Sub_Admin') {
+            return false;
+        }
+        // Sub_Admin with no role = no access.
+        if (empty($u->role_id)) {
+            return false;
+        }
+
+        static $cache = [];
+        $key = $u->role_id;
+        if (!isset($cache[$key])) {
+            $cache[$key] = \App\RolePermission::where('role_id', $u->role_id)
+                ->pluck('permission')->toArray();
+        }
+        return in_array($permission, $cache[$key], true);
+    }
+}
+
+if (!function_exists('admin_can_any')) {
+    /**
+     * True if the user can do ANY of the given permissions.
+     * Useful for showing a module if the user has any action in it.
+     */
+    function admin_can_any($permissions)
+    {
+        foreach ((array) $permissions as $p) {
+            if (admin_can($p)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+if (!function_exists('admin_can_module')) {
+    /**
+     * True if the user can access a module at all (has any action in it).
+     * Used to decide whether to show a sidebar item.
+     */
+    function admin_can_module($module)
+    {
+        $u = \Auth::user();
+        if ($u && $u->usertype === 'Admin') {
+            return true;
+        }
+        $cfg = config('permissions.modules.' . $module);
+        if (!$cfg) {
+            return false;
+        }
+        foreach ($cfg['actions'] as $action) {
+            if (admin_can($module . '.' . $action)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}

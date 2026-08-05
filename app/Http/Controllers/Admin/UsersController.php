@@ -359,8 +359,8 @@ class UsersController extends MainAdminController
         }
 
         $page_title=trans('words.add_admin');
-           
-        return view('admin.pages.users.addedit_admin',compact('page_title'));
+        $roles_list = \App\Role::orderBy('name')->get();
+        return view('admin.pages.users.addedit_admin',compact('page_title','roles_list'));
     }
     
     public function admin_addnew(Request $request)
@@ -428,6 +428,13 @@ class UsersController extends MainAdminController
         $user->name = $inputs['name'];       
         $user->email = $inputs['email'];
 
+        // RBAC: assign the chosen role (only meaningful for Sub_Admin).
+        if(isset($inputs['usertype']) && $inputs['usertype']=='Sub_Admin'){
+            $user->role_id = !empty($inputs['role_id']) ? $inputs['role_id'] : null;
+        } else {
+            $user->role_id = null; // master admins don't need a role
+        }
+
         if(empty($user->username))
         {
             $user->username = generate_username($inputs['name'], $inputs['email']);
@@ -469,8 +476,9 @@ class UsersController extends MainAdminController
           $page_title=trans('words.edit_admin');
 
           $user = User::findOrFail($id);
-            
-          return view('admin.pages.users.addedit_admin',compact('page_title','user'));
+          $roles_list = \App\Role::orderBy('name')->get();
+
+          return view('admin.pages.users.addedit_admin',compact('page_title','user','roles_list'));
         
     }
 

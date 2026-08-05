@@ -19,5 +19,27 @@ class MainAdminController extends Controller
 
     }
 
+    /**
+     * Shared "access denied" response for RBAC checks.
+     */
+    protected function denied()
+    {
+        \Session::flash('flash_message', trans('words.access_denied'));
+        return redirect('dashboard');
+    }
+
+    /**
+     * Guard a controller action by permission. Returns a redirect response to
+     * be returned by the caller if denied, or null if allowed.
+     *
+     *   if ($r = $this->requirePermission('books.edit')) return $r;
+     */
+    protected function requirePermission($permission)
+    {
+        if (!admin_can($permission)) {
+            return $this->denied();
+        }
+        return null;
+    }
 
 }

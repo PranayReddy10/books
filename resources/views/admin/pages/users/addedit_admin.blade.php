@@ -71,13 +71,24 @@
                             </select>
                       </div>
                   </div>
-                  <div class="form-group row">
-                      <label class="col-sm-3 col-form-label">&nbsp;</label>
+                  <div class="form-group row" id="role_row" @if(isset($user->usertype) AND $user->usertype!="Sub_Admin") style="display:none;" @endif>
+                      <label class="col-sm-3 col-form-label">Role</label>
                       <div class="col-sm-8">
-                        <p id="sub_admin_id" @if(isset($user->usertype) AND $user->usertype!="Sub_Admin") style="display:none;" @endif> Permission for Sub Admin<small id="emailHelp" class="form-text text-muted">({{trans('words.categories_text')}}, {{trans('words.sub_categories_text')}}, {{trans('words.authors_text')}}, {{trans('words.books_text')}}, {{trans('words.users')}}, {{trans('words.transactions')}}, {{trans('words.reviews')}}, {{trans('words.reports')}})</small></p>
-                        <p id="master_admin_id" @if(isset($user->usertype) AND $user->usertype!="Admin") style="display:none;" @endif @if(!isset($user->id)) style="display:none;" @endif> Permission for Master Admin<small id="emailHelp" class="form-text text-muted">(All Permission)</small></p>
-                      </div>  
-                  </div>  
+                        <select class="form-control" name="role_id" id="role_select">
+                          <option value="">— Select a role —</option>
+                          @if(isset($roles_list))
+                            @foreach($roles_list as $role)
+                              <option value="{{ $role->id }}" @if(isset($user->role_id) AND $user->role_id==$role->id) selected @endif>{{ $role->name }}</option>
+                            @endforeach
+                          @endif
+                        </select>
+                        <small class="form-text text-muted">Controls exactly which pages and actions this admin can access. Manage roles in <a href="{{ url('admin/roles') }}">Roles &amp; Permissions</a>.</small>
+                      </div>
+                  </div>
+                  <div class="form-group row" id="master_admin_id" @if(isset($user->usertype) AND $user->usertype!="Admin") style="display:none;" @endif>
+                      <label class="col-sm-3 col-form-label">&nbsp;</label>
+                      <div class="col-sm-8"><p class="text-muted">Master Admin has full access to everything.</p></div>
+                  </div>
                   <div class="form-group row">
                     <label class="col-sm-3 col-form-label">{{trans('words.status')}}</label>
                       <div class="col-sm-8">
