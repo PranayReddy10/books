@@ -1354,3 +1354,63 @@ if (!function_exists('admin_can_module')) {
         return false;
     }
 }
+
+if (!function_exists('youtube_id')) {
+    /**
+     * Extract the 11-char YouTube video id from any common URL form, or return
+     * the input unchanged if it already looks like a bare id.
+     * Handles: watch?v=, youtu.be/, embed/, shorts/, live/, and extra params.
+     */
+    function youtube_id($url)
+    {
+        $url = trim((string) $url);
+        if ($url === '') {
+            return '';
+        }
+        // Already a bare id?
+        if (preg_match('/^[A-Za-z0-9_-]{11}$/', $url)) {
+            return $url;
+        }
+        $patterns = [
+            '/youtube\.com\/watch\?[^ ]*v=([A-Za-z0-9_-]{11})/',
+            '/youtu\.be\/([A-Za-z0-9_-]{11})/',
+            '/youtube\.com\/embed\/([A-Za-z0-9_-]{11})/',
+            '/youtube\.com\/shorts\/([A-Za-z0-9_-]{11})/',
+            '/youtube\.com\/live\/([A-Za-z0-9_-]{11})/',
+            '/youtube\.com\/v\/([A-Za-z0-9_-]{11})/',
+        ];
+        foreach ($patterns as $p) {
+            if (preg_match($p, $url, $m)) {
+                return $m[1];
+            }
+        }
+        return '';
+    }
+}
+
+if (!function_exists('youtube_thumb')) {
+    /** Poster image for a YouTube id (hqdefault is always available). */
+    function youtube_thumb($id)
+    {
+        $id = youtube_id($id);
+        return $id ? 'https://img.youtube.com/vi/' . $id . '/hqdefault.jpg' : '';
+    }
+}
+
+if (!function_exists('youtube_embed')) {
+    /** Privacy-friendly embed URL for a YouTube id. */
+    function youtube_embed($id)
+    {
+        $id = youtube_id($id);
+        return $id ? 'https://www.youtube-nocookie.com/embed/' . $id : '';
+    }
+}
+
+if (!function_exists('youtube_watch')) {
+    /** Canonical watch URL for a YouTube id. */
+    function youtube_watch($id)
+    {
+        $id = youtube_id($id);
+        return $id ? 'https://www.youtube.com/watch?v=' . $id : '';
+    }
+}

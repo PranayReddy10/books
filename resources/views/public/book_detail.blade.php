@@ -6,6 +6,21 @@
 @section('og_image', book_asset_url($book->image))
 
 @section('structured_data')
+@if(isset($book->content_type) && $book->content_type == 'video')
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"VideoObject",
+  "name":{!! json_encode(stripslashes($book->title)) !!},
+  "description":{!! json_encode(Str::limit(strip_tags(stripslashes($book->description)),300) ?: stripslashes($book->title)) !!},
+  "thumbnailUrl":{!! json_encode(youtube_thumb($book->url)) !!},
+  "embedUrl":{!! json_encode(youtube_embed($book->url)) !!},
+  "contentUrl":{!! json_encode(youtube_watch($book->url)) !!},
+  "uploadDate":"{{ date('Y-m-d') }}",
+  "publisher":{"@type":"Organization","name":"JNTU Books"}
+}
+</script>
+@else
 <script type="application/ld+json">
 {
   "@context":"https://schema.org",
@@ -19,6 +34,7 @@
   "publisher":{"@type":"Organization","name":"JNTU Books"}
 }
 </script>
+@endif
 <script type="application/ld+json">
 {
   "@context":"https://schema.org",
@@ -75,21 +91,34 @@
         <div class="desc">{{ trim(strip_tags(stripslashes($book->description))) }}</div>
       @endif
 
-      {{-- Read gate: browse is free, reading needs login --}}
-      @auth
-        <div class="gate">
-          <h3>Ready to read</h3>
-          <p>You're signed in. Open the reader to start.</p>
-          <a href="{{ route('public.read', $book->id.'-'.Str::slug($book->title)) }}" class="btn btn-primary"><i class="fa fa-book-open"></i> Read now</a>
-        </div>
+      {{-- Video: free to watch. Book: browse free, reading needs login. --}}
+      @if(isset($book->content_type) && $book->content_type == 'video')
+        @php $vid = youtube_id($book->url); @endphp
+        @if($vid)
+          <div style="margin:18px 0;border-radius:16px;overflow:hidden;box-shadow:0 18px 40px rgba(20,16,60,.18)">
+            <div style="position:relative;padding-bottom:56.25%;height:0;background:#000">
+              <iframe src="{{ youtube_embed($vid) }}" title="{{ stripslashes($book->title) }}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+            </div>
+          </div>
+        @else
+          <div class="gate"><h3>Video unavailable</h3><p>This video link couldn't be loaded.</p></div>
+        @endif
       @else
-        <div class="gate">
-          <h3>Sign in to read this book</h3>
-          <p>Browsing is free. Create a free account or sign in to open the reader.</p>
-          <a href="{{ route('register') }}" class="btn btn-primary">Create free account</a>
-          <a href="{{ route('login') }}" class="btn btn-ghost">Sign in</a>
-        </div>
-      @endauth
+        @auth
+          <div class="gate">
+            <h3>Ready to read</h3>
+            <p>You're signed in. Open the reader to start.</p>
+            <a href="{{ route('public.read', $book->id.'-'.Str::slug($book->title)) }}" class="btn btn-primary"><i class="fa fa-book-open"></i> Read now</a>
+          </div>
+        @else
+          <div class="gate">
+            <h3>Sign in to read this book</h3>
+            <p>Browsing is free. Create a free account or sign in to open the reader.</p>
+            <a href="{{ route('register') }}" class="btn btn-primary">Create free account</a>
+            <a href="{{ route('login') }}" class="btn btn-ghost">Sign in</a>
+          </div>
+        @endauth
+      @endif
     </div>
   </div>
 

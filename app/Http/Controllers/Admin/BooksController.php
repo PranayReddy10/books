@@ -228,6 +228,20 @@ class BooksController extends MainAdminController
             $data_obj->image = $inputs['book_image'];
         }
 
+        // Content type: book (default) or video (YouTube).
+        $content_type = isset($inputs['content_type']) ? $inputs['content_type'] : 'book';
+        $data_obj->content_type = $content_type;
+
+        if ($content_type == 'video') {
+            // Video: store the YouTube URL, mark url_type youtube. No file upload.
+            $data_obj->url_type = 'youtube';
+            $data_obj->url = isset($inputs['youtube_url']) ? trim($inputs['youtube_url']) : '';
+            $data_obj->download_enable = 0;
+            // If no custom cover was set, leave image empty; the display layer
+            // (coverUrl / public partial) falls back to the YouTube thumbnail.
+        }
+        else
+        {
         // Book file / URL.
         if($inputs['url_type']=="server_url")
         {
@@ -258,6 +272,7 @@ class BooksController extends MainAdminController
          {
             $data_obj->download_enable = $inputs['download_enable'];  
           }
+        }
 
         $data_obj->book_on_rent = $inputs['book_on_rent'];
 

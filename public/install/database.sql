@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Aug 01, 2026 at 08:52 PM
+-- Generation Time: Aug 06, 2026 at 10:47 AM
 -- Server version: 5.7.23-23
 -- PHP Version: 8.1.34
 
@@ -76,6 +76,7 @@ CREATE TABLE `authors` (
 
 CREATE TABLE `books` (
   `id` int(11) NOT NULL,
+  `content_type` varchar(20) NOT NULL DEFAULT 'book',
   `cat_id` int(11) NOT NULL,
   `sub_cat_id` int(11) DEFAULT NULL,
   `author_ids` varchar(255) DEFAULT NULL,
@@ -133,6 +134,8 @@ CREATE TABLE `categories` (
 CREATE TABLE `colleges` (
   `id` bigint(20) UNSIGNED NOT NULL,
   `college_name` varchar(255) NOT NULL,
+  `college_code` varchar(8) DEFAULT NULL,
+  `college_type` varchar(20) DEFAULT NULL,
   `status` int(1) NOT NULL DEFAULT '1',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
@@ -375,6 +378,34 @@ CREATE TABLE `reports` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `roles`
+--
+
+CREATE TABLE `roles` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `is_system` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `role_permissions`
+--
+
+CREATE TABLE `role_permissions` (
+  `id` int(11) NOT NULL,
+  `role_id` int(11) NOT NULL,
+  `permission` varchar(191) NOT NULL,
+  `created_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `settings`
 --
 
@@ -530,6 +561,7 @@ CREATE TABLE `universities` (
 CREATE TABLE `users` (
   `id` int(11) NOT NULL,
   `usertype` varchar(255) CHARACTER SET latin1 DEFAULT 'User',
+  `role_id` int(11) DEFAULT NULL,
   `social_login_type` varchar(255) DEFAULT NULL,
   `google_id` varchar(255) DEFAULT NULL,
   `facebook_id` varchar(255) DEFAULT NULL,
@@ -722,6 +754,20 @@ ALTER TABLE `reports`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `roles`
+--
+ALTER TABLE `roles`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `role_permissions`
+--
+ALTER TABLE `role_permissions`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `role_perm_unique` (`role_id`,`permission`),
+  ADD KEY `role_id` (`role_id`);
+
+--
 -- Indexes for table `settings`
 --
 ALTER TABLE `settings`
@@ -909,6 +955,18 @@ ALTER TABLE `rent_info`
 -- AUTO_INCREMENT for table `reports`
 --
 ALTER TABLE `reports`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `roles`
+--
+ALTER TABLE `roles`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `role_permissions`
+--
+ALTER TABLE `role_permissions`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --

@@ -766,7 +766,7 @@ class AndroidApiController extends MainAPIController
                 $book_rent_time=$obj_data->book_rent_time?$obj_data->book_rent_time:'';
 
   
-                $response[]=array("post_id"=>$obj_data->id,"post_access"=>$obj_data->book_access,"cat_id"=>$obj_data->cat_id,"sub_cat_id"=>$obj_data->sub_cat_id,"book_access"=>$obj_data->book_access,"post_title"=>stripslashes($obj_data->title),"post_description"=>stripslashes($obj_data->description),"post_image"=>book_asset_url($obj_data->image),"book_on_rent"=>$book_on_rent,"book_rent_price"=>$book_rent_price,"book_rent_time"=>$book_rent_time,"total_views"=>$total_views,"total_rate"=>$total_rate,"favourite"=>$favourite,"author_list"=>$author_list);
+                $response[]=array("post_id"=>$obj_data->id,"post_access"=>$obj_data->book_access,"cat_id"=>$obj_data->cat_id,"sub_cat_id"=>$obj_data->sub_cat_id,"book_access"=>$obj_data->book_access,"post_title"=>stripslashes($obj_data->title),"content_type"=>($obj_data->content_type ?: "book"),"video_id"=>($obj_data->url_type=="youtube" ? youtube_id($obj_data->url) : ""),"post_description"=>stripslashes($obj_data->description),"post_image"=>$obj_data->coverUrl(),"book_on_rent"=>$book_on_rent,"book_rent_price"=>$book_rent_price,"book_rent_time"=>$book_rent_time,"total_views"=>$total_views,"total_rate"=>$total_rate,"favourite"=>$favourite,"author_list"=>$author_list);
 
                 unset($author_list);
             }
@@ -937,7 +937,7 @@ class AndroidApiController extends MainAPIController
                 $book_rent_time=$obj_data->book_rent_time?$obj_data->book_rent_time:'';
 
   
-                $response[]=array("post_id"=>$obj_data->id,"post_access"=>$obj_data->book_access,"cat_id"=>$obj_data->cat_id,"sub_cat_id"=>$obj_data->sub_cat_id,"book_access"=>$obj_data->book_access,"post_title"=>stripslashes($obj_data->title),"post_description"=>stripslashes($obj_data->description),"post_image"=>book_asset_url($obj_data->image),"book_on_rent"=>$book_on_rent,"book_rent_price"=>$book_rent_price,"book_rent_time"=>$book_rent_time,"total_views"=>$total_views,"total_rate"=>$total_rate,"favourite"=>$favourite,"author_list"=>$author_list);
+                $response[]=array("post_id"=>$obj_data->id,"post_access"=>$obj_data->book_access,"cat_id"=>$obj_data->cat_id,"sub_cat_id"=>$obj_data->sub_cat_id,"book_access"=>$obj_data->book_access,"post_title"=>stripslashes($obj_data->title),"content_type"=>($obj_data->content_type ?: "book"),"video_id"=>($obj_data->url_type=="youtube" ? youtube_id($obj_data->url) : ""),"post_description"=>stripslashes($obj_data->description),"post_image"=>$obj_data->coverUrl(),"book_on_rent"=>$book_on_rent,"book_rent_price"=>$book_rent_price,"book_rent_time"=>$book_rent_time,"total_views"=>$total_views,"total_rate"=>$total_rate,"favourite"=>$favourite,"author_list"=>$author_list);
 
                 unset($author_list);
             }
@@ -1000,7 +1000,7 @@ class AndroidApiController extends MainAPIController
                 $book_rent_price=$obj_data->book_rent_price?$obj_data->book_rent_price:'';
                 $book_rent_time=$obj_data->book_rent_time?$obj_data->book_rent_time:'';
  
-                $response[]=array("post_id"=>$obj_data->id,"post_access"=>$obj_data->book_access,"cat_id"=>$obj_data->cat_id,"sub_cat_id"=>$obj_data->sub_cat_id,"book_access"=>$obj_data->book_access,"post_title"=>stripslashes($obj_data->title),"post_description"=>stripslashes($obj_data->description),"post_image"=>book_asset_url($obj_data->image),"book_on_rent"=>$book_on_rent,"book_rent_price"=>$book_rent_price,"book_rent_time"=>$book_rent_time,"total_views"=>$total_views,"total_rate"=>$total_rate,"favourite"=>$favourite,"author_list"=>$author_list);
+                $response[]=array("post_id"=>$obj_data->id,"post_access"=>$obj_data->book_access,"cat_id"=>$obj_data->cat_id,"sub_cat_id"=>$obj_data->sub_cat_id,"book_access"=>$obj_data->book_access,"post_title"=>stripslashes($obj_data->title),"content_type"=>($obj_data->content_type ?: "book"),"video_id"=>($obj_data->url_type=="youtube" ? youtube_id($obj_data->url) : ""),"post_description"=>stripslashes($obj_data->description),"post_image"=>$obj_data->coverUrl(),"book_on_rent"=>$book_on_rent,"book_rent_price"=>$book_rent_price,"book_rent_time"=>$book_rent_time,"total_views"=>$total_views,"total_rate"=>$total_rate,"favourite"=>$favourite,"author_list"=>$author_list);
 
                 unset($author_list);
 
@@ -1064,7 +1064,7 @@ class AndroidApiController extends MainAPIController
                 $book_rent_price=$obj_data->book_rent_price?$obj_data->book_rent_price:'';
                 $book_rent_time=$obj_data->book_rent_time?$obj_data->book_rent_time:'';
  
-                $response[]=array("post_id"=>$obj_data->id,"post_access"=>$obj_data->book_access,"cat_id"=>$obj_data->cat_id,"sub_cat_id"=>$obj_data->sub_cat_id,"book_access"=>$obj_data->book_access,"post_title"=>stripslashes($obj_data->title),"post_description"=>stripslashes($obj_data->description),"post_image"=>book_asset_url($obj_data->image),"book_on_rent"=>$book_on_rent,"book_rent_price"=>$book_rent_price,"book_rent_time"=>$book_rent_time,"total_views"=>$total_views,"total_rate"=>$total_rate,"favourite"=>$favourite,"author_list"=>$author_list);
+                $response[]=array("post_id"=>$obj_data->id,"post_access"=>$obj_data->book_access,"cat_id"=>$obj_data->cat_id,"sub_cat_id"=>$obj_data->sub_cat_id,"book_access"=>$obj_data->book_access,"post_title"=>stripslashes($obj_data->title),"content_type"=>($obj_data->content_type ?: "book"),"video_id"=>($obj_data->url_type=="youtube" ? youtube_id($obj_data->url) : ""),"post_description"=>stripslashes($obj_data->description),"post_image"=>$obj_data->coverUrl(),"book_on_rent"=>$book_on_rent,"book_rent_price"=>$book_rent_price,"book_rent_time"=>$book_rent_time,"total_views"=>$total_views,"total_rate"=>$total_rate,"favourite"=>$favourite,"author_list"=>$author_list);
 
                 unset($author_list);
             }
@@ -1203,6 +1203,10 @@ class AndroidApiController extends MainAPIController
                 {
                     $post_file_url= $obj_data->url;
                 }
+                elseif($obj_data->url_type=="youtube")
+                {
+                    $post_file_url= youtube_watch($obj_data->url);
+                }
                 else
                 {
                     $post_file_url= \URL::to('/'.$obj_data->url);
@@ -1214,7 +1218,7 @@ class AndroidApiController extends MainAPIController
 
                 $continue_page_num = get_book_continue_page_num($obj_data->id,$user_id);
 
-                $response[]=array("continue_page_num"=>stripslashes($continue_page_num),"user_plan_status"=>$user_plan_status,"post_id"=>$obj_data->id,"cat_id"=>$obj_data->cat_id,"sub_cat_id"=>$obj_data->sub_cat_id,"post_access"=>$obj_data->book_access,"post_title"=>stripslashes($obj_data->title),"post_description"=>stripslashes($obj_data->description),"post_image"=>book_asset_url($obj_data->image),"post_url_type"=>$obj_data->url_type,"post_file_url"=>$post_file_url,"download_enable"=>$obj_data->download_enable,"rewarded_ad"=>$obj_data->rewarded_ad,"cover_color"=>(\App\Category::getCategoryInfo($obj_data->cat_id,'category_color') ?: '#4a7dff'),"book_purchased"=>$book_purchased,"book_on_rent"=>$book_on_rent,"book_rent_price"=>$book_rent_price,"book_rent_time"=>$book_rent_time,"share_url"=>$share_url,"total_views"=>$total_views,"total_rate"=>$total_rate,"total_reviews"=>$total_reviews,"favourite"=>$favourite,"author_list"=>$author_list,"related_books"=>$related_books);
+                $response[]=array("continue_page_num"=>stripslashes($continue_page_num),"user_plan_status"=>$user_plan_status,"post_id"=>$obj_data->id,"content_type"=>($obj_data->content_type ?: 'book'),"video_id"=>($obj_data->url_type=="youtube" ? youtube_id($obj_data->url) : ''),"video_url"=>($obj_data->url_type=="youtube" ? youtube_watch($obj_data->url) : ''),"cat_id"=>$obj_data->cat_id,"sub_cat_id"=>$obj_data->sub_cat_id,"post_access"=>$obj_data->book_access,"post_title"=>stripslashes($obj_data->title),"post_description"=>stripslashes($obj_data->description),"post_image"=>$obj_data->coverUrl(),"post_url_type"=>$obj_data->url_type,"post_file_url"=>$post_file_url,"download_enable"=>$obj_data->download_enable,"rewarded_ad"=>$obj_data->rewarded_ad,"cover_color"=>(\App\Category::getCategoryInfo($obj_data->cat_id,'category_color') ?: '#4a7dff'),"book_purchased"=>$book_purchased,"book_on_rent"=>$book_on_rent,"book_rent_price"=>$book_rent_price,"book_rent_time"=>$book_rent_time,"share_url"=>$share_url,"total_views"=>$total_views,"total_rate"=>$total_rate,"total_reviews"=>$total_reviews,"favourite"=>$favourite,"author_list"=>$author_list,"related_books"=>$related_books);
             
         }
         else
@@ -1276,7 +1280,7 @@ class AndroidApiController extends MainAPIController
                 $book_rent_price=$obj_data->book_rent_price?$obj_data->book_rent_price:'';
                 $book_rent_time=$obj_data->book_rent_time?$obj_data->book_rent_time:'';
  
-                $response[]=array("post_id"=>$obj_data->id,"post_access"=>$obj_data->book_access,"cat_id"=>$obj_data->cat_id,"sub_cat_id"=>$obj_data->sub_cat_id,"book_access"=>$obj_data->book_access,"post_title"=>stripslashes($obj_data->title),"post_description"=>stripslashes($obj_data->description),"post_image"=>book_asset_url($obj_data->image),"book_on_rent"=>$book_on_rent,"book_rent_price"=>$book_rent_price,"book_rent_time"=>$book_rent_time,"total_views"=>$total_views,"total_rate"=>$total_rate,"favourite"=>$favourite,"author_list"=>$author_list);
+                $response[]=array("post_id"=>$obj_data->id,"post_access"=>$obj_data->book_access,"cat_id"=>$obj_data->cat_id,"sub_cat_id"=>$obj_data->sub_cat_id,"book_access"=>$obj_data->book_access,"post_title"=>stripslashes($obj_data->title),"content_type"=>($obj_data->content_type ?: "book"),"video_id"=>($obj_data->url_type=="youtube" ? youtube_id($obj_data->url) : ""),"post_description"=>stripslashes($obj_data->description),"post_image"=>$obj_data->coverUrl(),"book_on_rent"=>$book_on_rent,"book_rent_price"=>$book_rent_price,"book_rent_time"=>$book_rent_time,"total_views"=>$total_views,"total_rate"=>$total_rate,"favourite"=>$favourite,"author_list"=>$author_list);
 
                 unset($author_list);
             }
@@ -2514,14 +2518,15 @@ class AndroidApiController extends MainAPIController
                 }
                 else
                 {
-                 $phone= $finduser->phone?$finduser->phone:'';       
-                
+                 $phone= $finduser->phone?$finduser->phone:'';  
+                 
                  if (empty($finduser->username)) {
-                    $finduser->username = generate_username($finduser->name, $finduser->email);
-                    $finduser->save();
+                 $finduser->username = generate_username($finduser->name, $finduser->email);
+                 $finduser->save();
                  }
                  $profile_complete = ($finduser->university && $finduser->department_id && $finduser->college) ? '1' : '0';
                  $response[] = array('user_id' => $finduser->id,'name' => $finduser->name,'username' => $finduser->username ?: '','email' => $finduser->email,'phone' => $phone,'user_image' => $user_image,'profile_complete' => $profile_complete,'msg' => trans('words.login_success'),'success'=>'1');
+
                 }
         }
         else
@@ -2540,11 +2545,12 @@ class AndroidApiController extends MainAPIController
                 $user_obj->name = $name; 
                 $user_obj->email = $email;         
                 $user_obj->password= bcrypt($password);  
-                $user_obj->phone= $phone?$phone:'';        
-                // Save the Google profile photo as the avatar (full URL) if sent.
+                $user_obj->phone= $phone?$phone:'';    
+                                // Save the Google profile photo as the avatar (full URL) if sent.
                 if (!empty($get_data['user_image'])) {
                     $user_obj->user_image = $get_data['user_image'];
                 }
+
                 $user_obj->save();
      
             }
@@ -2581,14 +2587,17 @@ class AndroidApiController extends MainAPIController
                 $user_image=\URL::asset('upload/profile.png');
             }
             $phone= $user->phone?$user->phone:'';
-
+            
             if (empty($user->username)) {
-                $user->username = generate_username($user->name, $user->email);
-                $user->save();
+            $user->username = generate_username($user->name, $user->email);
+            $user->save();
             }
             // Brand-new social user: never has university/dept/college yet.
             $profile_complete = ($user->university && $user->department_id && $user->college) ? '1' : '0';
             $response[] = array('user_id' => $user_id,'name' => $user->name,'username' => $user->username ?: '','email' => $user->email,'phone' => $phone,'user_image' => $user_image,'profile_complete' => $profile_complete,'msg' => trans('words.login_success'),'success'=>'1');
+
+
+            
         }
 
  
@@ -2771,7 +2780,8 @@ class AndroidApiController extends MainAPIController
         $user_obj->name = $get_data['name'];          
         $user_obj->email = $get_data['email']; 
         $user_obj->phone = $get_data['phone'];
-
+        
+        
         // Optional academic fields (used by the Google "complete profile" flow and
         // the edit-profile screen). Only overwrite when a value is sent.
         if (isset($get_data['university']) && $get_data['university'] !== '') {
@@ -2783,6 +2793,7 @@ class AndroidApiController extends MainAPIController
         if (isset($get_data['college']) && $get_data['college'] !== '') {
             $user_obj->college = $get_data['college'];
         }
+
         
         if($get_data['password'])
         {

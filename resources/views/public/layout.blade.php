@@ -121,6 +121,7 @@
     .cover-fallback-title{display:none}
     .cover-fallback .cover-fallback-title{display:flex;position:absolute;inset:0;align-items:center;justify-content:center;text-align:center;padding:16px;
       background:linear-gradient(150deg,#5b3df6,#12103a);color:#fff;font-family:'Sora';font-weight:700;font-size:15px;line-height:1.25}
+    .video-badge{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;pointer-events:none;padding-left:3px}
     .book-card .meta{padding:12px 14px}
     .book-card .bt{font-family:'Sora';font-weight:600;font-size:15px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
     .book-card .bc{color:var(--muted);font-size:13px;margin-top:4px}
