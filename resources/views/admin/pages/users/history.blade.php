@@ -34,7 +34,31 @@
                                                <b>Department:</b> {{ $user->department_id ? \App\Department::getDepartmentInfo($user->department_id,'department_name') : '-' }} <br/>
                                                <b>College:</b> {{ $user->college ?: '-' }} <br/>
                                                <b>Gender:</b> {{ $user->gender ?: '-' }} <br/>
-                                               <b>Joined:</b> {{ $user->created_at ? date('M d, Y', strtotime($user->created_at)) : '-' }}
+                                               <b>Joined:</b> {{ $user->created_at ? date('M d, Y', strtotime($user->created_at)) : '-' }} <br/>
+                                               <b>Signed up via:</b>
+                                               @php
+                                                 $src = $user->source_label;
+                                               @endphp
+                                               @if($user->social_login_type)
+                                                 <span class="badge badge-info">{{ ucfirst($user->social_login_type) }}</span>
+                                               @endif
+                                               @if($user->registered_via == 'app')
+                                                 <span class="badge badge-primary">App</span>
+                                               @elseif($user->registered_via == 'website')
+                                                 <span class="badge badge-warning">Website</span>
+                                               @else
+                                                 <span class="badge badge-secondary">Unknown</span>
+                                               @endif
+                                               <br/>
+                                               <b>Last login:</b>
+                                               @if($user->last_login_at)
+                                                 {{ date('M d, Y h:i A', strtotime($user->last_login_at)) }}
+                                                 @if($user->last_login_via)
+                                                   <span class="badge badge-light">{{ ucfirst($user->last_login_via) }}</span>
+                                                 @endif
+                                               @else
+                                                 <span class="text-muted">Never recorded</span>
+                                               @endif
                                              </p>
                                         </div>
 
@@ -206,6 +230,39 @@
                                     </tr>
                                     @empty
                                     <tr><td colspan="7" class="text-center text-muted" style="padding:18px;">This user hasn't uploaded any posts.</td></tr>
+                                    @endforelse
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+
+                            <div class="card-box">
+                              <h4 class="header-title m-t-0 m-b-30" style="margin-top:30px;">Books Read / Reading ({{ count($reading_history) }})</h4>
+                              <div class="table-responsive">
+                                <table class="table table-bordered">
+                                  <thead>
+                                    <tr>
+                                      <th>#</th>
+                                      <th>Book</th>
+                                      <th>Last Page</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    @forelse($reading_history as $rh)
+                                    <tr>
+                                      <td>{{ $rh->post_id }}</td>
+                                      <td>
+                                        @php $rtitle = \App\Books::getBookInfo($rh->post_id,'title'); @endphp
+                                        @if($rtitle)
+                                          <a href="{{ url('admin/books/edit/'.$rh->post_id) }}">{{ Str::limit(stripslashes($rtitle), 50) }}</a>
+                                        @else
+                                          <span class="text-muted">Book #{{ $rh->post_id }} (removed)</span>
+                                        @endif
+                                      </td>
+                                      <td>{{ $rh->page_num ?: '-' }}</td>
+                                    </tr>
+                                    @empty
+                                    <tr><td colspan="3" class="text-center text-muted">No reading activity recorded yet.</td></tr>
                                     @endforelse
                                   </tbody>
                                 </table>

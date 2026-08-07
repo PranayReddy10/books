@@ -1823,6 +1823,8 @@ class AndroidApiController extends MainAPIController
                 $user_id=$user_info->id;
                 $user = User::findOrFail($user_id);
 
+                $user->touchLogin('app');
+
                  
                 if($user->user_image!='')
                 {
@@ -1882,6 +1884,7 @@ class AndroidApiController extends MainAPIController
             $user = new User;
 
             $user->usertype = 'User';
+            $user->registered_via = 'app';
             $user->name = $name; 
             $user->username = generate_username($name, $email);
             $user->email = $email;         
@@ -2524,6 +2527,7 @@ class AndroidApiController extends MainAPIController
                  $finduser->username = generate_username($finduser->name, $finduser->email);
                  $finduser->save();
                  }
+                 $finduser->touchLogin('app');
                  $profile_complete = ($finduser->university && $finduser->department_id && $finduser->college) ? '1' : '0';
                  $response[] = array('user_id' => $finduser->id,'name' => $finduser->name,'username' => $finduser->username ?: '','email' => $finduser->email,'phone' => $phone,'user_image' => $user_image,'profile_complete' => $profile_complete,'msg' => trans('words.login_success'),'success'=>'1');
 
@@ -2540,6 +2544,7 @@ class AndroidApiController extends MainAPIController
                  $user_obj = new User;
 
                 $user_obj->usertype = 'User';
+                $user_obj->registered_via = 'app';
                 $user_obj->social_login_type = $social_login_type; 
                 $user_obj->google_id = $google_id; 
                 $user_obj->name = $name; 
@@ -2562,6 +2567,7 @@ class AndroidApiController extends MainAPIController
                  $user_obj = new User;
 
                 $user_obj->usertype = 'User';
+                $user_obj->registered_via = 'app';
                 $user_obj->social_login_type = $social_login_type; 
                 $user_obj->facebook_id = $facebook_id; 
                 $user_obj->name = $name; 
@@ -2592,6 +2598,7 @@ class AndroidApiController extends MainAPIController
             $user->username = generate_username($user->name, $user->email);
             $user->save();
             }
+            $user->touchLogin('app');
             // Brand-new social user: never has university/dept/college yet.
             $profile_complete = ($user->university && $user->department_id && $user->college) ? '1' : '0';
             $response[] = array('user_id' => $user_id,'name' => $user->name,'username' => $user->username ?: '','email' => $user->email,'phone' => $phone,'user_image' => $user_image,'profile_complete' => $profile_complete,'msg' => trans('words.login_success'),'success'=>'1');

@@ -25,6 +25,9 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'registered_via',
+        'last_login_at',
+        'last_login_via',
     ];
 
     /**
@@ -64,6 +67,40 @@ class User extends Authenticatable
             return  '';
         }
         
+    }
+
+    /**
+     * Human-readable description of how this account was created.
+     * e.g. "Google (App)", "App form", "Website form".
+     */
+    public function getSourceLabelAttribute()
+    {
+        $via = $this->registered_via; // 'app' | 'website' | null
+        $social = $this->social_login_type; // 'google' | 'facebook' | null
+
+        if ($social) {
+            $name = ucfirst($social);
+            return $via ? $name.' ('.ucfirst($via).')' : $name;
+        }
+
+        if ($via === 'app') {
+            return 'App form';
+        }
+        if ($via === 'website') {
+            return 'Website form';
+        }
+
+        return 'Unknown';
+    }
+
+    /**
+     * Record a successful login. $via = 'app' | 'website'.
+     */
+    public function touchLogin($via)
+    {
+        $this->last_login_at  = now();
+        $this->last_login_via = $via;
+        $this->save();
     }
 
     public function sendPasswordResetNotification($token)

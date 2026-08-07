@@ -297,9 +297,12 @@ class UsersController extends MainAdminController
 
           // Media posts this user uploaded (any status)
           $uploaded_posts = \App\MediaPost::where('user_id',$user_id)->orderBy('id','DESC')->get();
+
+          // Books this user has read / is reading (continue_read tracking)
+          $reading_history = \App\ContinueRead::where('user_id',$user_id)->orderBy('id','DESC')->get();
            
            
-          return view('admin.pages.users.history',compact('page_title','user','transactions_list','uploaded_books','uploaded_posts'));
+          return view('admin.pages.users.history',compact('page_title','user','transactions_list','uploaded_books','uploaded_posts','reading_history'));
         
     }
 

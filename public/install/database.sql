@@ -1,9 +1,9 @@
 -- phpMyAdmin SQL Dump
--- version 5.2.1
+-- version 5.2.3
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Aug 06, 2026 at 10:47 AM
+-- Generation Time: Aug 07, 2026 at 10:51 PM
 -- Server version: 5.7.23-23
 -- PHP Version: 8.1.34
 
@@ -563,6 +563,9 @@ CREATE TABLE `users` (
   `usertype` varchar(255) CHARACTER SET latin1 DEFAULT 'User',
   `role_id` int(11) DEFAULT NULL,
   `social_login_type` varchar(255) DEFAULT NULL,
+  `registered_via` varchar(20) DEFAULT NULL,
+  `last_login_at` timestamp NULL DEFAULT NULL,
+  `last_login_via` varchar(20) DEFAULT NULL,
   `google_id` varchar(255) DEFAULT NULL,
   `facebook_id` varchar(255) DEFAULT NULL,
   `name` varchar(255) CHARACTER SET latin1 NOT NULL,

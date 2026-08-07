@@ -49,6 +49,7 @@ class RegisterController extends Controller
     {
         return User::create([
             'usertype'      => 'User',
+            'registered_via' => 'website',
             'name'          => $data['name'],
             'username'      => generate_username($data['name'], $data['email']),
             'email'         => $data['email'],
