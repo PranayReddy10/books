@@ -21,7 +21,7 @@ class User extends Authenticatable
      *
      * @var array
      */
-    protected $fillable = ['usertype','role_id','name','username','email', 'password','user_image','mobile','remember_token','phone','rollnumber','university','department_id','college','gender'];
+    protected $fillable = ['usertype','role_id','name','username','email', 'password','user_image','mobile','remember_token','phone','rollnumber','university','department_id','college','gender','registered_via','last_login_at','last_login_via'];
 
     public function department()
     {
@@ -85,6 +85,16 @@ class User extends Authenticatable
             return  '';
         }
         
+    }
+
+    /**
+     * Record a successful login. $via = 'app' | 'website'.
+     */
+    public function touchLogin($via)
+    {
+        $this->last_login_at  = now();
+        $this->last_login_via = $via;
+        $this->save();
     }
 
     public function sendPasswordResetNotification($token)
