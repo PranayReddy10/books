@@ -479,6 +479,66 @@ class AndroidApiController extends MainAPIController
  
         }
         
+        // Latest Books (most recent) — same shape as trending, for the home row.
+        $latest_books = Books::where('status',1)->orderby('id','DESC')->take(10)->get();
+        if(count($latest_books) > 0)
+        {
+            foreach($latest_books as $lb)
+            {
+                $lb_author_list = array();
+                if(!empty($lb->author_ids))
+                {
+                    foreach(explode(',',$lb->author_ids) as $aid)
+                    {
+                        $lb_author_list[] = array('author_id'=>$aid, 'author_name'=>Authors::getAuthorsInfo($aid,'name'));
+                    }
+                }
+                $response['latest_books'][] = array(
+                    "post_id"=>$lb->id,
+                    "post_access"=>$lb->book_access,
+                    "post_type"=>"Book",
+                    "post_title"=>stripslashes($lb->title),
+                    "post_image"=>$lb->coverUrl(),
+                    "cover_color"=>(\App\Category::getCategoryInfo($lb->cat_id,'category_color') ?: '#4a7dff'),
+                    "content_type"=>($lb->content_type ?: "book"),
+                    "video_id"=>($lb->url_type=="youtube" ? youtube_id($lb->url) : ""),
+                    "book_on_rent"=>($lb->book_on_rent ?: '0'),
+                    "book_rent_price"=>($lb->rent_price ?: '0'),
+                    "book_rent_time"=>($lb->rent_time ?: '0'),
+                    "total_views"=>post_views_count($lb->id,"Book"),
+                    "total_rate"=>PostRatings::getPostTotalRatings($lb->id,"Book"),
+                    "favourite"=>check_favourite("Book",$lb->id,$user_id),
+                    "author_list"=>$lb_author_list
+                );
+                unset($lb_author_list);
+            }
+        }
+        else
+        {
+            $response['latest_books']=array();
+        }
+
+        // Latest Feed posts (approved) — horizontal thumbnails on home.
+        $feed_posts = MediaPost::where('upload_status','approved')->where('status',1)
+                        ->orderby('id','DESC')->take(10)->get();
+        if(count($feed_posts) > 0)
+        {
+            foreach($feed_posts as $fp)
+            {
+                $response['feed_posts'][] = array(
+                    "post_id"    => $fp->id,
+                    "media_type" => $fp->media_type,
+                    "title"      => stripslashes($fp->title),
+                    "thumb_url"  => $fp->thumb_url ?: '',
+                    "file_url"   => $fp->file_url ?: ''
+                );
+            }
+        }
+        else
+        {
+            $response['feed_posts']=array();
+        }
+        
         return \Response::json(array(            
             'EBOOK_APP' => $response,
             'status_code' => 200,
