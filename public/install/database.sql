@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Aug 07, 2026 at 10:51 PM
+-- Generation Time: Aug 10, 2026 at 11:50 PM
 -- Server version: 5.7.23-23
 -- PHP Version: 8.1.34
 
@@ -373,6 +373,88 @@ CREATE TABLE `reports` (
   `post_type` varchar(255) NOT NULL,
   `message` varchar(255) NOT NULL,
   `date` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `report_cards`
+--
+
+CREATE TABLE `report_cards` (
+  `id` int(11) NOT NULL,
+  `result_id` int(11) NOT NULL,
+  `pdf_url` varchar(500) DEFAULT NULL,
+  `verified_at_generation` tinyint(1) NOT NULL DEFAULT '0',
+  `generated_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `results`
+--
+
+CREATE TABLE `results` (
+  `id` int(11) NOT NULL,
+  `hall_ticket_no` varchar(20) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `university_id` int(11) DEFAULT NULL,
+  `student_name` varchar(150) DEFAULT NULL,
+  `regulation` varchar(10) DEFAULT NULL,
+  `degree` varchar(30) DEFAULT NULL,
+  `branch` varchar(100) DEFAULT NULL,
+  `current_cgpa` decimal(4,2) DEFAULT NULL,
+  `total_credits` decimal(6,1) DEFAULT NULL,
+  `backlogs_count` int(11) NOT NULL DEFAULT '0',
+  `source` varchar(10) NOT NULL DEFAULT 'manual',
+  `verified` tinyint(1) NOT NULL DEFAULT '0',
+  `locked` tinyint(1) NOT NULL DEFAULT '0',
+  `is_public` tinyint(1) NOT NULL DEFAULT '0',
+  `share_token` varchar(40) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `result_semesters`
+--
+
+CREATE TABLE `result_semesters` (
+  `id` int(11) NOT NULL,
+  `result_id` int(11) NOT NULL,
+  `sem_code` varchar(10) NOT NULL,
+  `sgpa` decimal(4,2) DEFAULT NULL,
+  `credits_earned` decimal(6,1) DEFAULT NULL,
+  `exam_month_year` varchar(30) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `result_subjects`
+--
+
+CREATE TABLE `result_subjects` (
+  `id` int(11) NOT NULL,
+  `result_semester_id` int(11) NOT NULL,
+  `subject_code` varchar(30) DEFAULT NULL,
+  `subject_name` varchar(200) DEFAULT NULL,
+  `internal` int(11) DEFAULT NULL,
+  `external` int(11) DEFAULT NULL,
+  `total` int(11) DEFAULT NULL,
+  `grade` varchar(5) DEFAULT NULL,
+  `credits` decimal(4,1) DEFAULT NULL,
+  `grade_points` decimal(6,2) DEFAULT NULL,
+  `is_backlog` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
@@ -757,6 +839,38 @@ ALTER TABLE `reports`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `report_cards`
+--
+ALTER TABLE `report_cards`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_result` (`result_id`);
+
+--
+-- Indexes for table `results`
+--
+ALTER TABLE `results`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_hall_ticket` (`hall_ticket_no`),
+  ADD UNIQUE KEY `uq_share_token` (`share_token`),
+  ADD KEY `idx_user` (`user_id`),
+  ADD KEY `idx_university` (`university_id`),
+  ADD KEY `idx_verified` (`verified`);
+
+--
+-- Indexes for table `result_semesters`
+--
+ALTER TABLE `result_semesters`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_result` (`result_id`);
+
+--
+-- Indexes for table `result_subjects`
+--
+ALTER TABLE `result_subjects`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_semester` (`result_semester_id`);
+
+--
 -- Indexes for table `roles`
 --
 ALTER TABLE `roles`
@@ -958,6 +1072,30 @@ ALTER TABLE `rent_info`
 -- AUTO_INCREMENT for table `reports`
 --
 ALTER TABLE `reports`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `report_cards`
+--
+ALTER TABLE `report_cards`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `results`
+--
+ALTER TABLE `results`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `result_semesters`
+--
+ALTER TABLE `result_semesters`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `result_subjects`
+--
+ALTER TABLE `result_subjects`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
