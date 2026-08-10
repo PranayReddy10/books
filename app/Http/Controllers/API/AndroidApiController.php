@@ -2978,7 +2978,7 @@ class AndroidApiController extends MainAPIController
         $response[] = array('result_id' => $result->id, 'msg' => 'Result saved', 'success' => '1');
         return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
     }
-
+    
     /**
      * report_generate — build the watermarked PNG report card for the caller's
      * own result, upload to Spaces, record in report_cards, return the URL.
@@ -3067,7 +3067,6 @@ class AndroidApiController extends MainAPIController
             $user_obj->college = $get_data['college'];
         }
 
-        
         if($get_data['password'])
         {
             $user_obj->password = bcrypt($get_data['password']);
