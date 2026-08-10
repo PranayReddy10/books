@@ -23,6 +23,10 @@ Route::group(['prefix' => 'v1','namespace' => 'API'], function(){
     Route::get('/', 'AndroidApiController@index');
     Route::post('app_details', 'AndroidApiController@app_details');
     Route::post('payment_settings', 'AndroidApiController@payment_settings');
+    
+    Route::post('result_get',      'AndroidApiController@result_get');
+    Route::post('result_save',     'AndroidApiController@result_save');
+    Route::post('report_generate', 'AndroidApiController@report_generate');
 
     
     Route::post('home', 'AndroidApiController@home');

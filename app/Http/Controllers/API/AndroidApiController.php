@@ -2804,6 +2804,212 @@ class AndroidApiController extends MainAPIController
             'success' => 1
         ));
     }
+    
+    public function result_get()
+    {
+        $get_data = checkSignSalt($_POST['data']);
+        $user_id  = $get_data['user_id'];
+
+        $user = User::where('id', $user_id)->first();
+        if (!$user) {
+            $response[] = array('msg' => 'Something went wrong', 'success' => '0');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        $result = Result::where('user_id', $user_id)->first();
+        if (!$result) {
+            $response[] = array('has_result' => 0, 'msg' => 'No result found', 'success' => '1');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        $sems = array();
+        foreach ($result->semesters as $sem) {
+            $subs = array();
+            foreach ($sem->subjects()->get() as $sub) {
+                $subs[] = array(
+                    'subject_code' => (string) $sub->subject_code,
+                    'subject_name' => (string) $sub->subject_name,
+                    'internal'     => $sub->internal,
+                    'external'     => $sub->external,
+                    'total'        => $sub->total,
+                    'grade'        => (string) $sub->grade,
+                    'credits'      => $sub->credits,
+                    'is_backlog'   => (int) $sub->is_backlog,
+                );
+            }
+            $sems[] = array(
+                'sem_code'        => (string) $sem->sem_code,
+                'sgpa'            => $sem->sgpa,
+                'credits_earned'  => $sem->credits_earned,
+                'exam_month_year' => (string) $sem->exam_month_year,
+                'subjects'        => $subs,
+            );
+        }
+
+        $latestCard = $result->reportCards()->orderBy('id', 'desc')->first();
+
+        $response[] = array(
+            'has_result'       => 1,
+            'result_id'        => $result->id,
+            'hall_ticket_no'   => (string) $result->hall_ticket_no,
+            'student_name'     => (string) $result->student_name,
+            'regulation'       => (string) $result->regulation,
+            'degree'           => (string) $result->degree,
+            'branch'           => (string) $result->branch,
+            'current_cgpa'     => $result->current_cgpa,
+            'total_credits'    => $result->total_credits,
+            'backlogs_count'   => (int) $result->backlogs_count,
+            'verified'         => (int) $result->verified,
+            'locked'           => (int) $result->locked,   // app disables edit when 1
+            'share_url'        => $result->share_token
+                                    ? rtrim(env('APP_URL'), '/') . '/report/' . $result->share_token
+                                    : '',
+            'report_image_url' => $latestCard ? (string) $latestCard->pdf_url : '',
+            'semesters'        => $sems,
+            'msg'              => 'OK',
+            'success'          => '1',
+        );
+
+        return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+    }
+
+    /**
+     * result_save — create/replace the caller's own result (owner-only).
+     * Rejects writes when locked (admin-verified). See SQL patch for schema.
+     * Payload includes semesters_json (see ANDROID guide for exact shape).
+     */
+    public function result_save()
+    {
+        $get_data = checkSignSalt($_POST['data']);
+        $user_id  = $get_data['user_id'];
+
+        $user = User::where('id', $user_id)->first();
+        if (!$user) {
+            $response[] = array('msg' => 'Something went wrong', 'success' => '0');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        $hall = trim(isset($get_data['hall_ticket_no']) ? $get_data['hall_ticket_no'] : '');
+        if ($hall === '') {
+            $response[] = array('msg' => 'Hall ticket number is required', 'success' => '0');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        // Hall-ticket ownership guard.
+        $existing = Result::where('hall_ticket_no', $hall)->first();
+        if ($existing && $existing->user_id && (int) $existing->user_id !== (int) $user_id) {
+            $response[] = array('msg' => 'This hall ticket is already registered by another account', 'success' => '0');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        // SERVER-SIDE LOCK ENFORCEMENT: verified records can't be edited by student.
+        $result = $existing ?: Result::where('user_id', $user_id)->first();
+        if ($result && (int) $result->locked === 1) {
+            $response[] = array('msg' => 'This result has been verified and can no longer be edited', 'success' => '0', 'locked' => 1);
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        $semJson = isset($get_data['semesters_json']) ? $get_data['semesters_json'] : '[]';
+        $sems    = json_decode($semJson, true);
+        if (!is_array($sems)) { $sems = array(); }
+
+        \DB::beginTransaction();
+        try {
+            if (!$result) {
+                $result = new Result();
+                $result->hall_ticket_no = $hall;
+                $result->user_id        = $user_id;
+                $result->source         = 'manual';
+                $result->verified       = 0;
+                $result->locked         = 0;
+                $result->is_public      = 0;
+                $result->share_token    = \Illuminate\Support\Str::random(24);
+            }
+
+            $result->university_id  = isset($user->university_id) ? $user->university_id : $result->university_id;
+            $result->student_name   = isset($get_data['student_name'])  ? $get_data['student_name']  : $user->name;
+            $result->regulation     = isset($get_data['regulation'])    ? $get_data['regulation']    : $result->regulation;
+            $result->degree         = isset($get_data['degree'])        ? $get_data['degree']        : $result->degree;
+            $result->branch         = isset($get_data['branch'])        ? $get_data['branch']        : $result->branch;
+            $result->current_cgpa   = isset($get_data['current_cgpa'])  ? $get_data['current_cgpa']  : null;
+            $result->total_credits  = isset($get_data['total_credits']) ? $get_data['total_credits'] : null;
+            $result->backlogs_count = isset($get_data['backlogs_count'])? (int) $get_data['backlogs_count'] : 0;
+            $result->save();
+
+            // Replace the whole tree.
+            $oldSemIds = ResultSemester::where('result_id', $result->id)->pluck('id')->toArray();
+            if (!empty($oldSemIds)) {
+                ResultSubject::whereIn('result_semester_id', $oldSemIds)->delete();
+                ResultSemester::where('result_id', $result->id)->delete();
+            }
+
+            foreach ($sems as $s) {
+                $sem = new ResultSemester();
+                $sem->result_id       = $result->id;
+                $sem->sem_code        = isset($s['sem_code']) ? $s['sem_code'] : '';
+                $sem->sgpa            = isset($s['sgpa']) ? $s['sgpa'] : null;
+                $sem->credits_earned  = isset($s['credits_earned']) ? $s['credits_earned'] : null;
+                $sem->exam_month_year = isset($s['exam_month_year']) ? $s['exam_month_year'] : '';
+                $sem->save();
+
+                $subjects = isset($s['subjects']) && is_array($s['subjects']) ? $s['subjects'] : array();
+                foreach ($subjects as $sub) {
+                    $row = new ResultSubject();
+                    $row->result_semester_id = $sem->id;
+                    $row->subject_code = isset($sub['subject_code']) ? $sub['subject_code'] : '';
+                    $row->subject_name = isset($sub['subject_name']) ? $sub['subject_name'] : '';
+                    $row->internal     = isset($sub['internal']) ? $sub['internal'] : null;
+                    $row->external     = isset($sub['external']) ? $sub['external'] : null;
+                    $row->total        = isset($sub['total']) ? $sub['total'] : null;
+                    $row->grade        = isset($sub['grade']) ? $sub['grade'] : '';
+                    $row->credits      = isset($sub['credits']) ? $sub['credits'] : null;
+                    $row->is_backlog   = isset($sub['is_backlog']) ? (int) $sub['is_backlog'] : 0;
+                    $row->save();
+                }
+            }
+
+            \DB::commit();
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            $response[] = array('msg' => 'Could not save result', 'success' => '0');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        $response[] = array('result_id' => $result->id, 'msg' => 'Result saved', 'success' => '1');
+        return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+    }
+
+    /**
+     * report_generate — build the watermarked PNG report card for the caller's
+     * own result, upload to Spaces, record in report_cards, return the URL.
+     */
+    public function report_generate()
+    {
+        $get_data = checkSignSalt($_POST['data']);
+        $user_id  = $get_data['user_id'];
+
+        $result = Result::where('user_id', $user_id)->first();
+        if (!$result) {
+            $response[] = array('msg' => 'No result to generate', 'success' => '0');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        // Shared generator lives in helpers.php (also used by admin verify).
+        $url = generate_result_report_card($result);
+        if (!$url) {
+            $response[] = array('msg' => 'Could not generate report card', 'success' => '0');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        $response[] = array(
+            'report_image_url' => $url,
+            'share_url'        => rtrim(env('APP_URL'), '/') . '/report/' . $result->share_token,
+            'verified'         => (int) $result->verified,
+            'msg'              => 'Report card ready',
+            'success'          => '1',
+        );
+        return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+    }
 
     public function profile_update(Request $request)
     { 

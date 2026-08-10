@@ -20,6 +20,7 @@ Route::get('/robots.txt', 'PublicSiteController@robots');
 Route::get('/.well-known/assetlinks.json', 'PublicSiteController@assetlinks');
 
 
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -62,6 +63,15 @@ Route::group(['namespace' => 'Admin', 'prefix' => 'admin'], function () {
     Route::get('university/edit/{id}', 'UniversityController@edit')->middleware('adminpermission:university.edit');
     Route::post('university/add_edit', 'UniversityController@addnew')->middleware('adminpermission:university.edit');
     Route::get('university/delete/{id}', 'UniversityController@delete')->middleware('adminpermission:university.delete');
+    
+    Route::get('results', 'ResultsController@list')->middleware('adminpermission:results.view');
+    Route::get('results/view/{id}', 'ResultsController@view')->middleware('adminpermission:results.view');
+    Route::post('results/update/{id}', 'ResultsController@update')->middleware('adminpermission:results.edit');
+    Route::get('results/verify/{id}', 'ResultsController@verify')->middleware('adminpermission:results.verify');
+    Route::get('results/unverify/{id}', 'ResultsController@unverify')->middleware('adminpermission:results.verify');
+    Route::get('results/regenerate/{id}', 'ResultsController@regenerate')->middleware('adminpermission:results.regenerate');
+    Route::get('results/delete/{id}', 'ResultsController@delete')->middleware('adminpermission:results.delete');
+    Route::get('report_cards', 'ResultsController@cards')->middleware('adminpermission:results.view');
 
     Route::get('department', 'DepartmentController@list')->middleware('adminpermission:department.view');
     Route::get('department/add', 'DepartmentController@add')->middleware('adminpermission:department.create');
@@ -259,6 +269,8 @@ Route::get('/clear-cache', function() {
 */
 Route::get('register', 'Auth\RegisterController@showRegistrationForm')->name('register');
 Route::post('register', 'Auth\RegisterController@register');
+
+Route::get('/report/{token}', 'PublicSiteController@reportDetail')->name('public.report');
 
 Route::get('signin', 'Auth\LoginController@showLoginForm')->name('login');
 Route::post('signin', 'Auth\LoginController@login');

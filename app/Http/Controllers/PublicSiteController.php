@@ -65,6 +65,23 @@ class PublicSiteController extends Controller
 
         return view('public.books', compact('books', 'categories', 'q', 'cat'));
     }
+    
+    public function reportDetail($token)
+    {
+        $result = \App\Result::where('share_token', $token)->firstOrFail();
+        $result->load('semesters');
+
+        $sems = array();
+        foreach ($result->semesters as $sem) {
+            $sem->loaded_subjects = $sem->subjects()->get();
+            $sems[] = $sem;
+        }
+
+        $latestCard = \App\ReportCard::where('result_id', $result->id)->orderBy('id', 'DESC')->first();
+        $image_url  = $latestCard ? $latestCard->pdf_url : '';
+
+        return view('public.report_detail', compact('result', 'sems', 'image_url'));
+    }
 
     /* Book detail (public). Reading/downloading requires login (gated in view). */
     public function bookDetail($slug)

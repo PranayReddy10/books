@@ -44,6 +44,8 @@ return [
         'pages'        => ['label' => 'Pages',             'actions' => ['view', 'create', 'edit', 'delete']],
         'app_ads'      => ['label' => 'App Ads',           'actions' => ['view', 'edit']],
         'payment'      => ['label' => 'Payment Gateways',  'actions' => ['view', 'edit']],
+        
+        'results'      => ['label' => 'Results',           'actions' => ['view', 'edit', 'verify', 'regenerate', 'delete']],
 
         'notification' => ['label' => 'Notifications',     'actions' => ['view', 'create']],
 
@@ -60,5 +62,6 @@ return [
         'approve' => 'Approve',
         'notify'  => 'Notify',
         'verify'  => 'Verify',
+        'regenerate' => 'Regenerate',
     ],
 ];

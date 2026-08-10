@@ -20,6 +20,7 @@
         @if(admin_can_module('media'))<li><a href="{{ URL::to('admin/media') }}" class="waves-effect {{classActivePath('media')}}"><span class="nav-ic ic-red"><i class="fa fa-photo"></i></span><span>Media Feed</span></a></li>@endif
         @if(admin_can_module('posts'))<li><a href="{{ URL::to('admin/posts') }}" class="waves-effect {{classActivePath('posts')}}"><span class="nav-ic ic-blue"><i class="fa fa-th-large"></i></span><span>Posts</span></a></li>@endif
         @if(admin_can_module('home_sections'))<li><a href="{{ URL::to('admin/home_sections') }}" class="waves-effect {{classActivePath('home_sections')}}"><span class="nav-ic ic-teal"><i class="fa fa-th-list"></i></span><span>{{trans('words.home_sections')}}</span></a></li>@endif
+        @if(admin_can_module('results'))<li><a href="{{ URL::to('admin/results') }}" class="waves-effect {{classActivePath('results')}}"><span class="nav-ic ic-green"><i class="fa fa-graduation-cap"></i></span><span>Results</span></a></li>@endif
 
         @if(admin_can_module('users') || admin_can_module('roles') || admin_can_module('reviews') || admin_can_module('reports'))
         <li class="menu-section">Users</li>

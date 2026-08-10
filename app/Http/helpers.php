@@ -1414,3 +1414,183 @@ if (!function_exists('youtube_watch')) {
         return $id ? 'https://www.youtube.com/watch?v=' . $id : '';
     }
 }
+
+if (!function_exists('generate_result_report_card')) {
+    /**
+     * Draw a watermarked PNG report card for a Result, upload to Spaces,
+     * write a report_cards row, and return the public URL (or null on error).
+     *
+     * @param  \App\Result $result
+     * @return string|null
+     */
+    function generate_result_report_card($result)
+    {
+        try {
+            $result->load('semesters');
+
+            $W = 1000;
+            $pad = 48;
+            $rowH = 40;
+            $verified = (int) $result->verified === 1;
+
+            $height = 300;
+            $semData = array();
+            foreach ($result->semesters as $sem) {
+                $subs = $sem->subjects()->get();
+                $semData[] = array('sem' => $sem, 'subs' => $subs);
+                $height += 70 + 44 + (max(count($subs), 1) * $rowH) + 24;
+            }
+            $height += 140;
+            $H = max($height, 700);
+
+            $font = null;
+            foreach (array(
+                public_path('admin_assets/fonts/cover-font.ttf'),
+                storage_path('fonts/cover-font.ttf'),
+                public_path('admin_assets/fonts/DejaVuSans-Bold.ttf'),
+            ) as $cand) {
+                if (file_exists($cand)) { $font = $cand; break; }
+            }
+
+            $img = \Image::canvas($W, $H, '#ffffff');
+
+            // Brand bar
+            $img->rectangle(0, 0, $W, 120, function ($d) { $d->background('#0d47a1'); });
+            $img->text('JNTU BOOKS', $pad, 46, function ($f) use ($font) {
+                if ($font) { $f->file($font); }
+                $f->size(40); $f->color('#ffffff'); $f->align('left'); $f->valign('top');
+            });
+            $img->text('Student Result Report Card', $pad, 92, function ($f) use ($font) {
+                if ($font) { $f->file($font); }
+                $f->size(20); $f->color('#bbdefb'); $f->align('left'); $f->valign('top');
+            });
+            if ($verified) {
+                $img->rectangle($W - 250, 40, $W - $pad, 88, function ($d) { $d->background('#2e7d32'); });
+                $img->text('VERIFIED', $W - 165, 52, function ($f) use ($font) {
+                    if ($font) { $f->file($font); }
+                    $f->size(22); $f->color('#ffffff'); $f->align('center'); $f->valign('top');
+                });
+            }
+
+            // Diagonal watermark baked into pixels
+            for ($y = 60; $y < $H; $y += 190) {
+                for ($x = -40; $x < $W; $x += 340) {
+                    $img->text('JNTU BOOKS', $x, $y, function ($f) use ($font) {
+                        if ($font) { $f->file($font); }
+                        $f->size(34); $f->color(array(13, 71, 161, 0.06)); $f->angle(30);
+                        $f->align('left'); $f->valign('top');
+                    });
+                }
+            }
+
+            // Summary block
+            $y = 150;
+            $line = function ($label, $val) use (&$y, $img, $font, $pad) {
+                $img->text($label, $pad, $y, function ($f) use ($font) {
+                    if ($font) { $f->file($font); }
+                    $f->size(18); $f->color('#555555'); $f->align('left'); $f->valign('top');
+                });
+                $img->text($val !== null && $val !== '' ? (string) $val : '-', $pad + 220, $y, function ($f) use ($font) {
+                    if ($font) { $f->file($font); }
+                    $f->size(18); $f->color('#111111'); $f->align('left'); $f->valign('top');
+                });
+                $y += 34;
+            };
+            $line('Name', $result->student_name);
+            $line('Hall Ticket No', $result->hall_ticket_no);
+            $line('Branch', $result->branch);
+            $line('Regulation', $result->regulation);
+            $line('Current CGPA', $result->current_cgpa);
+            $line('Total Credits', $result->total_credits);
+            $line('Pending Backlogs', $result->backlogs_count);
+            $y += 10;
+
+            // Semester tables
+            foreach ($semData as $sd) {
+                $sem = $sd['sem']; $subs = $sd['subs'];
+
+                $img->rectangle($pad, $y, $W - $pad, $y + 44, function ($d) { $d->background('#e3f2fd'); });
+                $semTitle = 'Semester ' . $sem->sem_code
+                          . ($sem->sgpa !== null ? '   |   SGPA: ' . $sem->sgpa : '')
+                          . ($sem->exam_month_year ? '   |   ' . $sem->exam_month_year : '');
+                $img->text($semTitle, $pad + 14, $y + 12, function ($f) use ($font) {
+                    if ($font) { $f->file($font); }
+                    $f->size(18); $f->color('#0d47a1'); $f->align('left'); $f->valign('top');
+                });
+                $y += 56;
+
+                $cols = array(
+                    array('Code', $pad + 14), array('Subject', $pad + 150),
+                    array('Grade', $W - 300), array('Cr', $W - 190), array('Status', $W - 130),
+                );
+                foreach ($cols as $c) {
+                    $img->text($c[0], $c[1], $y, function ($f) use ($font) {
+                        if ($font) { $f->file($font); }
+                        $f->size(15); $f->color('#777777'); $f->align('left'); $f->valign('top');
+                    });
+                }
+                $y += 30;
+
+                if (count($subs) === 0) {
+                    $img->text('No subjects entered', $pad + 14, $y, function ($f) use ($font) {
+                        if ($font) { $f->file($font); }
+                        $f->size(15); $f->color('#999999'); $f->align('left'); $f->valign('top');
+                    });
+                    $y += $rowH;
+                } else {
+                    foreach ($subs as $sub) {
+                        $back = (int) $sub->is_backlog === 1;
+                        $rowColor = $back ? '#c62828' : '#111111';
+                        $vals = array(
+                            array((string) $sub->subject_code, $pad + 14),
+                            array(mb_strimwidth((string) $sub->subject_name, 0, 34, '…'), $pad + 150),
+                            array((string) $sub->grade, $W - 300),
+                            array($sub->credits !== null ? (string) $sub->credits : '-', $W - 190),
+                            array($back ? 'BACKLOG' : 'Pass', $W - 130),
+                        );
+                        foreach ($vals as $v) {
+                            $img->text($v[0], $v[1], $y, function ($f) use ($font, $rowColor) {
+                                if ($font) { $f->file($font); }
+                                $f->size(15); $f->color($rowColor); $f->align('left'); $f->valign('top');
+                            });
+                        }
+                        $y += $rowH;
+                    }
+                }
+                $y += 24;
+            }
+
+            // Footer
+            $fy = $H - 110;
+            $img->rectangle(0, $fy, $W, $H, function ($d) { $d->background('#0d47a1'); });
+            $img->text('read.jntubooks.in', $pad, $fy + 24, function ($f) use ($font) {
+                if ($font) { $f->file($font); }
+                $f->size(22); $f->color('#ffffff'); $f->align('left'); $f->valign('top');
+            });
+            $img->text('Unofficial — entered by student via JNTU Books. Verify at results.jntuh.ac.in',
+                $pad, $fy + 60, function ($f) use ($font) {
+                if ($font) { $f->file($font); }
+                $f->size(14); $f->color('#bbdefb'); $f->align('left'); $f->valign('top');
+            });
+
+            $binary   = (string) $img->encode('png');
+            $fileName = 'report_' . $result->id . '_' . time() . '.png';
+            $key      = 'reports/' . $fileName;
+
+            \Illuminate\Support\Facades\Storage::disk('spaces')->put($key, $binary, 'public');
+            $publicUrl = \Illuminate\Support\Facades\Storage::disk('spaces')->url($key);
+
+            $card = new \App\ReportCard();
+            $card->result_id = $result->id;
+            $card->pdf_url   = $publicUrl; // column reused for image URL in Phase 1
+            $card->verified_at_generation = (int) $result->verified;
+            $card->generated_at = now();
+            $card->save();
+
+            return $publicUrl;
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+}
+
