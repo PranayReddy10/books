@@ -74,6 +74,7 @@ Route::group(['namespace' => 'Admin', 'prefix' => 'admin'], function () {
     Route::get('report_cards', 'ResultsController@cards')->middleware('adminpermission:results.view');
     Route::get('results/add',   'ResultsController@add')->middleware('adminpermission:results.edit');
     Route::post('results/store','ResultsController@store')->middleware('adminpermission:results.edit');
+    Route::get('results/view/{id}', 'ResultsController@view')->middleware('adminpermission:results.view');
 
     Route::get('department', 'DepartmentController@list')->middleware('adminpermission:department.view');
     Route::get('department/add', 'DepartmentController@add')->middleware('adminpermission:department.create');
