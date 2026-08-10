@@ -114,7 +114,7 @@
             <h4 class="header-title m-b-20">Generated Cards</h4>
             @forelse($cards as $c)
               <div class="m-b-10">
-                <a href="{{ $c->pdf_url }}" target="_blank">{{ $c->generated_at ? $c->generated_at->format('d M Y H:i') : '' }}</a>
+                <a href="{{ $c->pdf_url }}" target="_blank">{{ $c->generated_at ? \Carbon\Carbon::parse($c->generated_at)->format('d M Y H:i') : '' }}</a>
                 @if($c->verified_at_generation)<span class="badge badge-success">verified</span>@endif
               </div>
             @empty
