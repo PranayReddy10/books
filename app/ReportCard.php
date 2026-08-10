@@ -12,6 +12,10 @@ class ReportCard extends Model
         'result_id', 'pdf_url', 'verified_at_generation', 'generated_at',
     ];
 
+    protected $casts = [
+        'generated_at' => 'datetime',
+    ];
+
     public function result()
     {
         return $this->belongsTo(Result::class, 'result_id');

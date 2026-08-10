@@ -10,7 +10,8 @@ class ResultSubject extends Model
 
     protected $fillable = [
         'result_semester_id', 'subject_code', 'subject_name',
-        'internal', 'external', 'total', 'grade', 'credits', 'is_backlog',
+        'internal', 'external', 'total', 'grade', 'credits',
+        'grade_points', 'is_backlog',
     ];
 
     public function semester()

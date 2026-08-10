@@ -1415,6 +1415,69 @@ if (!function_exists('youtube_watch')) {
     }
 }
 
+if (!function_exists('jntuh_grade_points_map')) {
+    /**
+     * JNTUH 10-point grade -> grade point value.
+     * O=10, A+=9, A=8, B+=7, B=6, C=5, F=0. (Ab / absent treated as 0.)
+     */
+    function jntuh_grade_points_map()
+    {
+        return [
+            'O'  => 10, 'A+' => 9, 'A' => 8, 'B+' => 7,
+            'B'  => 6,  'C'  => 5, 'F' => 0, 'AB' => 0, 'ABSENT' => 0,
+        ];
+    }
+}
+
+if (!function_exists('jntuh_grade_value')) {
+    /** Point value for a grade string, or null if unknown. */
+    function jntuh_grade_value($grade)
+    {
+        $g = strtoupper(trim((string) $grade));
+        $map = jntuh_grade_points_map();
+        return array_key_exists($g, $map) ? $map[$g] : null;
+    }
+}
+
+if (!function_exists('jntuh_subject_grade_points')) {
+    /**
+     * Credit points for a subject = credits * grade-value.
+     * Returns null if either input is missing/unknown.
+     */
+    function jntuh_subject_grade_points($grade, $credits)
+    {
+        $val = jntuh_grade_value($grade);
+        if ($val === null || $credits === null || $credits === '') {
+            return null;
+        }
+        return round(((float) $credits) * $val, 2);
+    }
+}
+
+if (!function_exists('jntuh_compute_sgpa')) {
+    /**
+     * SGPA = sum(grade_points) / sum(credits) for a set of subject arrays,
+     * each having 'credits' and 'grade_points' (or 'grade' to derive).
+     * Returns null when there are no credits.
+     */
+    function jntuh_compute_sgpa($subjects)
+    {
+        $sumGp = 0.0; $sumCr = 0.0;
+        foreach ($subjects as $s) {
+            $cr = isset($s['credits']) && $s['credits'] !== '' ? (float) $s['credits'] : 0;
+            if ($cr <= 0) { continue; }
+            $gp = isset($s['grade_points']) && $s['grade_points'] !== ''
+                    ? (float) $s['grade_points']
+                    : jntuh_subject_grade_points(isset($s['grade']) ? $s['grade'] : '', $cr);
+            if ($gp === null) { $gp = 0; }
+            $sumGp += $gp;
+            $sumCr += $cr;
+        }
+        if ($sumCr <= 0) { return null; }
+        return round($sumGp / $sumCr, 2);
+    }
+}
+
 if (!function_exists('generate_result_report_card')) {
     /**
      * Draw a watermarked PNG report card for a Result, upload to Spaces,
@@ -1521,7 +1584,8 @@ if (!function_exists('generate_result_report_card')) {
 
                 $cols = array(
                     array('Code', $pad + 14), array('Subject', $pad + 150),
-                    array('Grade', $W - 300), array('Cr', $W - 190), array('Status', $W - 130),
+                    array('Cr', $W - 360), array('Grade', $W - 300),
+                    array('Points', $W - 210), array('Status', $W - 120),
                 );
                 foreach ($cols as $c) {
                     $img->text($c[0], $c[1], $y, function ($f) use ($font) {
@@ -1541,12 +1605,18 @@ if (!function_exists('generate_result_report_card')) {
                     foreach ($subs as $sub) {
                         $back = (int) $sub->is_backlog === 1;
                         $rowColor = $back ? '#c62828' : '#111111';
+                        $gp = ($sub->grade_points !== null && $sub->grade_points !== '')
+                                ? (string) (0 + $sub->grade_points)
+                                : (function_exists('jntuh_subject_grade_points')
+                                    ? (string) (0 + jntuh_subject_grade_points($sub->grade, $sub->credits))
+                                    : '-');
                         $vals = array(
                             array((string) $sub->subject_code, $pad + 14),
-                            array(mb_strimwidth((string) $sub->subject_name, 0, 34, '…'), $pad + 150),
+                            array(mb_strimwidth((string) $sub->subject_name, 0, 30, '…'), $pad + 150),
+                            array($sub->credits !== null ? (string) (0 + $sub->credits) : '-', $W - 360),
                             array((string) $sub->grade, $W - 300),
-                            array($sub->credits !== null ? (string) $sub->credits : '-', $W - 190),
-                            array($back ? 'BACKLOG' : 'Pass', $W - 130),
+                            array($gp !== '' ? $gp : '-', $W - 210),
+                            array($back ? 'BACKLOG' : 'Pass', $W - 120),
                         );
                         foreach ($vals as $v) {
                             $img->text($v[0], $v[1], $y, function ($f) use ($font, $rowColor) {

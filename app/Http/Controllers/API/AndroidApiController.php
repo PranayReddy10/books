@@ -2834,6 +2834,7 @@ class AndroidApiController extends MainAPIController
                     'total'        => $sub->total,
                     'grade'        => (string) $sub->grade,
                     'credits'      => $sub->credits,
+                    'grade_points' => $sub->grade_points,
                     'is_backlog'   => (int) $sub->is_backlog,
                 );
             }
@@ -2963,6 +2964,13 @@ class AndroidApiController extends MainAPIController
                     $row->total        = isset($sub['total']) ? $sub['total'] : null;
                     $row->grade        = isset($sub['grade']) ? $sub['grade'] : '';
                     $row->credits      = isset($sub['credits']) ? $sub['credits'] : null;
+                    // Auto-fill grade points from grade x credits when the app
+                    // didn't send an explicit value.
+                    $row->grade_points = (isset($sub['grade_points']) && $sub['grade_points'] !== '')
+                        ? $sub['grade_points']
+                        : (function_exists('jntuh_subject_grade_points')
+                            ? jntuh_subject_grade_points(isset($sub['grade']) ? $sub['grade'] : '', isset($sub['credits']) ? $sub['credits'] : null)
+                            : null);
                     $row->is_backlog   = isset($sub['is_backlog']) ? (int) $sub['is_backlog'] : 0;
                     $row->save();
                 }
