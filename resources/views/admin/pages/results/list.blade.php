@@ -29,6 +29,9 @@
             {{-- Filters --}}
             <div class="row m-b-20">
               <div class="col-md-12">
+                <div class="float-right m-b-10">
+                  <a href="{{ URL::to('admin/results/add') }}" class="btn btn-success"><i class="fa fa-plus"></i> Add Result</a>
+                </div>
                 {!! Form::open(array('url' => 'admin/results','class'=>'form-inline','role'=>'form','method'=>'get')) !!}
                   <input type="text" name="s" value="{{ request('s') }}" placeholder="Hall ticket / name" class="form-control m-r-5">
                   <select name="verified" class="form-control m-r-5">

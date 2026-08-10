@@ -72,6 +72,8 @@ Route::group(['namespace' => 'Admin', 'prefix' => 'admin'], function () {
     Route::get('results/regenerate/{id}', 'ResultsController@regenerate')->middleware('adminpermission:results.regenerate');
     Route::get('results/delete/{id}', 'ResultsController@delete')->middleware('adminpermission:results.delete');
     Route::get('report_cards', 'ResultsController@cards')->middleware('adminpermission:results.view');
+    Route::get('results/add',   'ResultsController@add')->middleware('adminpermission:results.edit');
+    Route::post('results/store','ResultsController@store')->middleware('adminpermission:results.edit');
 
     Route::get('department', 'DepartmentController@list')->middleware('adminpermission:department.view');
     Route::get('department/add', 'DepartmentController@add')->middleware('adminpermission:department.create');

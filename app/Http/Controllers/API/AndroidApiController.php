@@ -2978,6 +2978,98 @@ class AndroidApiController extends MainAPIController
         $response[] = array('result_id' => $result->id, 'msg' => 'Result saved', 'success' => '1');
         return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
     }
+    
+    public function add()
+    {
+        $universities = University::orderBy('university_name')->get();
+        // Recent users for the optional link picker (Select2 is searchable).
+        $users = User::where('usertype', 'User')->orderBy('id', 'DESC')->limit(2000)->get();
+        $page_title = 'Add Result';
+        return view('admin.pages.results.add', compact('page_title', 'universities', 'users'));
+    }
+
+    /** Persist a new admin-created result (+ its semester/subject tree). */
+    public function store(Request $request)
+    {
+        $hall = trim($request->input('hall_ticket_no', ''));
+        if ($hall === '') {
+            \Session::flash('flash_message', 'Hall ticket number is required');
+            return redirect('admin/results/add');
+        }
+
+        // Uniqueness: hall ticket is the record key.
+        if (Result::where('hall_ticket_no', $hall)->exists()) {
+            \Session::flash('flash_message', 'A result with this hall ticket already exists');
+            return redirect('admin/results/add');
+        }
+
+        \DB::beginTransaction();
+        try {
+            $result = new Result();
+            $result->hall_ticket_no = $hall;
+            $result->user_id        = $request->input('user_id') ?: null;  // optional link
+            $result->university_id  = $request->input('university_id') ?: null;
+            $result->student_name   = $request->input('student_name');
+            $result->regulation     = $request->input('regulation');
+            $result->degree         = $request->input('degree');
+            $result->branch         = $request->input('branch');
+            $result->current_cgpa   = $request->input('current_cgpa') ?: null;
+            $result->total_credits  = $request->input('total_credits') ?: null;
+            $result->backlogs_count = (int) $request->input('backlogs_count', 0);
+            $result->source         = 'manual';
+            $result->verified       = 0;
+            $result->locked         = 0;
+            $result->is_public      = 0;
+            $result->share_token    = Str::random(24);
+            $result->save();
+
+            // Semester + subject rows arrive as parallel arrays keyed by index.
+            //   semesters[<i>][sem_code|sgpa|credits_earned|exam_month_year]
+            //   subjects[<i>][<j>][subject_code|subject_name|internal|external|
+            //                       total|grade|credits|is_backlog]
+            $semesters = $request->input('semesters', array());
+            $subjects  = $request->input('subjects', array());
+
+            foreach ($semesters as $i => $s) {
+                if (empty($s['sem_code'])) { continue; }
+                $sem = new ResultSemester();
+                $sem->result_id       = $result->id;
+                $sem->sem_code        = $s['sem_code'];
+                $sem->sgpa            = isset($s['sgpa']) && $s['sgpa'] !== '' ? $s['sgpa'] : null;
+                $sem->credits_earned  = isset($s['credits_earned']) && $s['credits_earned'] !== '' ? $s['credits_earned'] : null;
+                $sem->exam_month_year = isset($s['exam_month_year']) ? $s['exam_month_year'] : '';
+                $sem->save();
+
+                $rows = isset($subjects[$i]) && is_array($subjects[$i]) ? $subjects[$i] : array();
+                foreach ($rows as $sub) {
+                    if (empty($sub['subject_code']) && empty($sub['subject_name'])) { continue; }
+                    $row = new ResultSubject();
+                    $row->result_semester_id = $sem->id;
+                    $row->subject_code = isset($sub['subject_code']) ? $sub['subject_code'] : '';
+                    $row->subject_name = isset($sub['subject_name']) ? $sub['subject_name'] : '';
+                    $row->internal     = (isset($sub['internal']) && $sub['internal'] !== '') ? $sub['internal'] : null;
+                    $row->external     = (isset($sub['external']) && $sub['external'] !== '') ? $sub['external'] : null;
+                    $row->total        = (isset($sub['total']) && $sub['total'] !== '') ? $sub['total'] : null;
+                    $row->grade        = isset($sub['grade']) ? $sub['grade'] : '';
+                    $row->credits      = (isset($sub['credits']) && $sub['credits'] !== '') ? $sub['credits'] : null;
+                    $row->is_backlog   = !empty($sub['is_backlog']) ? 1 : 0;
+                    $row->save();
+                }
+            }
+
+            \DB::commit();
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            \Session::flash('flash_message', 'Could not save result');
+            return redirect('admin/results/add');
+        }
+
+        // Generate the report card immediately so the admin sees output.
+        generate_result_report_card($result);
+
+        \Session::flash('flash_message', 'Result added');
+        return redirect('admin/results/view/' . $result->id);
+    }
 
     /**
      * report_generate — build the watermarked PNG report card for the caller's
