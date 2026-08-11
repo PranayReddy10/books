@@ -27,6 +27,7 @@
                   @endforeach
                 </select>
                 <small class="text-muted">Pick the student first — their hall ticket, name, branch and regulation fill in automatically.</small>
+                <input type="text" id="f_email" class="form-control mt-2" placeholder="Selected user email" readonly>
               </div>
             </div>
             <div class="form-group row">
@@ -161,6 +162,7 @@
       var setVal = function(id, val){ var el = document.getElementById(id); if (el && val) el.value = val; };
       setVal('f_hall', d.roll);
       setVal('f_name', d.name);
+      setVal('f_email', d.email);
       setVal('f_branch', d.branch);
       setVal('f_degree', d.degree);
       var reg = document.getElementById('f_regulation');

@@ -86,8 +86,24 @@ class ResultsController extends MainAdminController
     {
         $universities = University::orderBy('university_name')->get();
         $users = User::where('usertype', 'User')->orderBy('id', 'DESC')->limit(2000)->get();
+        // Details keyed by user id so the form can auto-fill on user selection.
+        $userDetails = array();
+        foreach ($users as $u) {
+            $dept = '';
+            if (isset($u->department_id) && $u->department_id) {
+                $dept = (string) \App\Department::getDepartmentInfo($u->department_id, 'department_name');
+            }
+            $userDetails[$u->id] = array(
+                'roll'       => (string) (isset($u->rollnumber) ? $u->rollnumber : ''),
+                'name'       => (string) $u->name,
+                'email'      => (string) $u->email,
+                'branch'     => $dept,
+                'regulation' => (string) (isset($u->regulation) ? $u->regulation : ''),
+                'degree'     => (string) (isset($u->degree) ? $u->degree : ''),
+            );
+        }
         $page_title = 'Add Result';
-        return view('admin.pages.results.add', compact('page_title', 'universities', 'users'));
+        return view('admin.pages.results.add', compact('page_title', 'universities', 'users', 'userDetails'));
     }
 
     /** Persist a new result + its tree. */

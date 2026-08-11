@@ -2797,7 +2797,9 @@ class AndroidApiController extends MainAPIController
             'department'    => $department_name,
             'college'       => isset($user->college) ? stripslashes($user->college) : '',
             'gender'        => isset($user->gender) ? $user->gender : '',
-            'branch'        => isset($user->branch) ? stripslashes($user->branch) : '',
+            'branch'        => (isset($user->department_id) && $user->department_id)
+                                ? (string) \App\Department::getDepartmentInfo($user->department_id, 'department_name')
+                                : (isset($user->branch) ? stripslashes($user->branch) : ''),
             'regulation'    => isset($user->regulation) ? $user->regulation : '',
             'degree'        => isset($user->degree) ? stripslashes($user->degree) : '',
             'rollnumber'    => isset($user->rollnumber) ? stripslashes($user->rollnumber) : '',
@@ -2879,6 +2881,14 @@ class AndroidApiController extends MainAPIController
                 'subjects'        => $subs,
             );
         }
+        // Branch shown in results is the user's Department name.
+        $branchName = '';
+        if (isset($user->department_id) && $user->department_id) {
+            $branchName = (string) \App\Department::getDepartmentInfo($user->department_id, 'department_name');
+        }
+        if ($branchName === '' && isset($result->branch)) {
+            $branchName = (string) $result->branch; // fall back to stored value
+        }
         // Whole-result "locked" now means EVERY semester is locked (so the app
         // only hides the global add/edit entry point when nothing is editable).
         $allLocked = (count($sems) > 0 && $lockedCount === count($sems)) ? 1 : 0;
@@ -2892,7 +2902,7 @@ class AndroidApiController extends MainAPIController
             'student_name'     => (string) $result->student_name,
             'regulation'       => (string) $result->regulation,
             'degree'           => (string) $result->degree,
-            'branch'           => (string) $result->branch,
+            'branch'           => $branchName,
             'current_cgpa'     => $result->current_cgpa,
             'total_credits'    => $result->total_credits,
             'backlogs_count'   => (int) $result->backlogs_count,
@@ -2951,11 +2961,15 @@ class AndroidApiController extends MainAPIController
 
         // Owner-only + profile-completeness guard (defence in depth; the app
         // also blocks and routes the user to Edit Profile first).
+        // Branch = the user's Department (from the university->department cascade).
         $uRoll   = trim(isset($user->rollnumber) ? $user->rollnumber : '');
-        $uBranch = trim(isset($user->branch) ? $user->branch : '');
+        $uBranch = '';
+        if (isset($user->department_id) && $user->department_id) {
+            $uBranch = trim((string) \App\Department::getDepartmentInfo($user->department_id, 'department_name'));
+        }
         $uReg    = trim(isset($user->regulation) ? $user->regulation : '');
-        if ($uRoll === '' || $uBranch === '' || $uReg === '') {
-            $response[] = array('msg' => 'Please complete your profile (roll number, branch, regulation) before adding results', 'success' => '0', 'need_profile' => 1);
+        if ($uRoll === '' || $uBranch === '') {
+            $response[] = array('msg' => 'Please complete your profile (roll number and department) before adding results', 'success' => '0', 'need_profile' => 1);
             return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
         }
 
