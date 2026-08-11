@@ -27,6 +27,11 @@ use App\Transactions;
 use App\ContinueRead;
 use App\UserDownload;
 use App\RentInfo;
+// Results feature models (were referenced unqualified -> "Class not found" 500s).
+use App\Result;
+use App\ResultSemester;
+use App\ResultSubject;
+use App\ReportCard;
 
 use Illuminate\Http\Request;
 use App\Http\Requests;
@@ -2817,6 +2822,25 @@ class AndroidApiController extends MainAPIController
         }
 
         $result = Result::where('user_id', $user_id)->first();
+
+        // Admin-added results are keyed by hall ticket and often have no user_id.
+        // Fall back to the student's roll/hall-ticket number, then link it so the
+        // match is permanent afterwards.
+        if (!$result) {
+            $roll = trim(isset($user->rollnumber) ? $user->rollnumber : '');
+            if ($roll !== '') {
+                $result = Result::where('hall_ticket_no', $roll)
+                    ->where(function ($q) use ($user_id) {
+                        $q->whereNull('user_id')->orWhere('user_id', $user_id);
+                    })
+                    ->first();
+                if ($result && !$result->user_id) {
+                    $result->user_id = $user_id;
+                    $result->save();
+                }
+            }
+        }
+
         if (!$result) {
             $response[] = array('has_result' => 0, 'msg' => 'No result found', 'success' => '1');
             return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
@@ -2928,6 +2952,10 @@ class AndroidApiController extends MainAPIController
             }
 
             $result->university_id  = isset($user->university_id) ? $user->university_id : $result->university_id;
+            // Claim an admin-added row (created without a user_id) for this student.
+            if (!$result->user_id) {
+                $result->user_id = $user_id;
+            }
             $result->student_name   = isset($get_data['student_name'])  ? $get_data['student_name']  : $user->name;
             $result->regulation     = isset($get_data['regulation'])    ? $get_data['regulation']    : $result->regulation;
             $result->degree         = isset($get_data['degree'])        ? $get_data['degree']        : $result->degree;
@@ -2997,6 +3025,21 @@ class AndroidApiController extends MainAPIController
         $user_id  = $get_data['user_id'];
 
         $result = Result::where('user_id', $user_id)->first();
+        if (!$result) {
+            $u = User::where('id', $user_id)->first();
+            $roll = $u ? trim(isset($u->rollnumber) ? $u->rollnumber : '') : '';
+            if ($roll !== '') {
+                $result = Result::where('hall_ticket_no', $roll)
+                    ->where(function ($q) use ($user_id) {
+                        $q->whereNull('user_id')->orWhere('user_id', $user_id);
+                    })
+                    ->first();
+                if ($result && !$result->user_id) {
+                    $result->user_id = $user_id;
+                    $result->save();
+                }
+            }
+        }
         if (!$result) {
             $response[] = array('msg' => 'No result to generate', 'success' => '0');
             return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
