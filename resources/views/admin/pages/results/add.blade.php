@@ -18,23 +18,24 @@
             <h4 class="header-title m-b-20">Add Result</h4>
 
             <div class="form-group row">
-              <label class="col-md-3 col-form-label">Hall Ticket No <span class="text-danger">*</span></label>
-              <div class="col-md-9"><input type="text" name="hall_ticket_no" class="form-control" required></div>
-            </div>
-            <div class="form-group row">
-              <label class="col-md-3 col-form-label">Student Name</label>
-              <div class="col-md-9"><input type="text" name="student_name" class="form-control"></div>
-            </div>
-            <div class="form-group row">
-              <label class="col-md-3 col-form-label">Link to App User <small class="text-muted">(optional)</small></label>
+              <label class="col-md-3 col-form-label">Select App User <span class="text-danger">*</span></label>
               <div class="col-md-9">
-                <select name="user_id" class="form-control select2">
-                  <option value="">— Not linked —</option>
+                <select name="user_id" id="sel_user" class="form-control select2">
+                  <option value="">— Select a user —</option>
                   @foreach($users as $u)
                     <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->email }})</option>
                   @endforeach
                 </select>
+                <small class="text-muted">Pick the student first — their hall ticket, name, branch and regulation fill in automatically.</small>
               </div>
+            </div>
+            <div class="form-group row">
+              <label class="col-md-3 col-form-label">Hall Ticket No <span class="text-danger">*</span></label>
+              <div class="col-md-9"><input type="text" name="hall_ticket_no" id="f_hall" class="form-control" required></div>
+            </div>
+            <div class="form-group row">
+              <label class="col-md-3 col-form-label">Student Name</label>
+              <div class="col-md-9"><input type="text" name="student_name" id="f_name" class="form-control"></div>
             </div>
             <div class="form-group row">
               <label class="col-md-3 col-form-label">University</label>
@@ -50,18 +51,18 @@
             <div class="form-group row">
               <label class="col-md-3 col-form-label">Regulation</label>
               <div class="col-md-3">
-                <select name="regulation" class="form-control">
-                  @foreach(['R22','R18','R16','R13'] as $reg)
+                <select name="regulation" id="f_regulation" class="form-control">
+                  @foreach(['R26','R25','R24','R23','R22','R21','R20','R19','R18','R17','R16'] as $reg)
                     <option value="{{ $reg }}">{{ $reg }}</option>
                   @endforeach
                 </select>
               </div>
               <label class="col-md-2 col-form-label">Degree</label>
-              <div class="col-md-4"><input type="text" name="degree" class="form-control" placeholder="B.Tech / B.Pharm"></div>
+              <div class="col-md-4"><input type="text" name="degree" id="f_degree" class="form-control" placeholder="B.Tech / B.Pharm"></div>
             </div>
             <div class="form-group row">
-              <label class="col-md-3 col-form-label">Branch</label>
-              <div class="col-md-9"><input type="text" name="branch" class="form-control" placeholder="CSE / ECE / MECH ..."></div>
+              <label class="col-md-3 col-form-label">Branch <small class="text-muted">(= Department)</small></label>
+              <div class="col-md-9"><input type="text" name="branch" id="f_branch" class="form-control" placeholder="CSE / ECE / MECH ..."></div>
             </div>
             <div class="form-group row">
               <label class="col-md-3 col-form-label">Current CGPA</label>
@@ -150,6 +151,28 @@
 
 <script>
 (function(){
+  // Auto-fill student details when an app user is selected.
+  var USER_DETAILS = {!! json_encode($userDetails ?? []) !!};
+  var selUser = document.getElementById('sel_user');
+  if (selUser) {
+    var applyUser = function(){
+      var d = USER_DETAILS[selUser.value];
+      if (!d) return;
+      var setVal = function(id, val){ var el = document.getElementById(id); if (el && val) el.value = val; };
+      setVal('f_hall', d.roll);
+      setVal('f_name', d.name);
+      setVal('f_branch', d.branch);
+      setVal('f_degree', d.degree);
+      var reg = document.getElementById('f_regulation');
+      if (reg && d.regulation) {
+        for (var i=0;i<reg.options.length;i++){ if (reg.options[i].value===d.regulation){ reg.selectedIndex=i; break; } }
+      }
+    };
+    selUser.addEventListener('change', applyUser);
+    // select2 fires jQuery events; hook that too if present.
+    if (window.jQuery) { jQuery(selUser).on('change', applyUser); }
+  }
+
   var GP = {'O':10,'A+':9,'A':8,'B+':7,'B':6,'C':5,'F':0,'AB':0};
   var semIdx = 0, subjIdx = {};
 
