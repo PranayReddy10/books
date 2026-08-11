@@ -2898,9 +2898,9 @@ class AndroidApiController extends MainAPIController
         $response[] = array(
             'has_result'       => 1,
             'result_id'        => $result->id,
-            'hall_ticket_no'   => (string) $result->hall_ticket_no,
-            'student_name'     => (string) $result->student_name,
-            'regulation'       => (string) $result->regulation,
+            'hall_ticket_no'   => (string) (isset($user->rollnumber) && $user->rollnumber !== '' ? $user->rollnumber : $result->hall_ticket_no),
+            'student_name'     => (string) (isset($user->name) && $user->name !== '' ? $user->name : $result->student_name),
+            'regulation'       => (string) (isset($user->regulation) && $user->regulation !== '' ? $user->regulation : $result->regulation),
             'degree'           => (string) $result->degree,
             'branch'           => $branchName,
             'current_cgpa'     => $result->current_cgpa,
@@ -3000,9 +3000,8 @@ class AndroidApiController extends MainAPIController
             $result->regulation     = $uReg;
             $result->degree         = trim(isset($user->degree) ? $user->degree : (isset($get_data['degree']) ? $get_data['degree'] : ''));
             $result->branch         = $uBranch;
-            $result->current_cgpa   = isset($get_data['current_cgpa'])  ? $get_data['current_cgpa']  : null;
-            $result->total_credits  = isset($get_data['total_credits']) ? $get_data['total_credits'] : null;
-            $result->backlogs_count = isset($get_data['backlogs_count'])? (int) $get_data['backlogs_count'] : 0;
+            // current_cgpa / total_credits / backlogs_count are computed
+            // server-side after the semester tree is written (see below).
             $result->save();
 
             // Lock-aware replace: keep every LOCKED semester exactly as-is, and
@@ -3036,14 +3035,13 @@ class AndroidApiController extends MainAPIController
                 $sem = new ResultSemester();
                 $sem->result_id       = $result->id;
                 $sem->sem_code        = $code;
-                $sem->sgpa            = isset($s['sgpa']) ? $s['sgpa'] : null;
-                $sem->credits_earned  = isset($s['credits_earned']) ? $s['credits_earned'] : null;
                 $sem->exam_month_year = isset($s['exam_month_year']) ? $s['exam_month_year'] : '';
                 $sem->verified        = 0;   // student-entered semesters start unverified
                 $sem->locked          = 0;
                 $sem->save();
 
                 $subjects = isset($s['subjects']) && is_array($s['subjects']) ? $s['subjects'] : array();
+                $semGp = 0.0; $semCr = 0.0;   // for this semester's SGPA
                 foreach ($subjects as $sub) {
                     $row = new ResultSubject();
                     $row->result_semester_id = $sem->id;
@@ -3063,8 +3061,38 @@ class AndroidApiController extends MainAPIController
                             : null);
                     $row->is_backlog   = isset($sub['is_backlog']) ? (int) $sub['is_backlog'] : 0;
                     $row->save();
+
+                    // JNTUH SGPA/CGPA: sum(grade_point * credits) / sum(credits),
+                    // counting only subjects that carry credits > 0 (F/Ab with 0
+                    // credits and mandatory 0-credit courses are excluded).
+                    $cr = ($row->credits !== null) ? (float) $row->credits : 0.0;
+                    if ($cr > 0) {
+                        $gp = ($row->grade_points !== null) ? (float) $row->grade_points : 0.0;
+                        $semGp += $gp; $semCr += $cr;
+                    }
+                }
+                // Persist this semester's SGPA + credits earned.
+                $sem->sgpa = ($semCr > 0) ? round($semGp / $semCr, 2) : null;
+                $sem->credits_earned = $semCr;
+                $sem->save();
+            }
+
+            // Overall CGPA + total credits across ALL semesters (locked ones too).
+            $grandGp = 0.0; $grandCr = 0.0; $backlogs = 0;
+            foreach (ResultSemester::where('result_id', $result->id)->get() as $allSem) {
+                foreach ($allSem->subjects()->get() as $allSub) {
+                    $cr = ($allSub->credits !== null) ? (float) $allSub->credits : 0.0;
+                    if ($cr > 0) {
+                        $gp = ($allSub->grade_points !== null) ? (float) $allSub->grade_points : 0.0;
+                        $grandGp += $gp; $grandCr += $cr;
+                    }
+                    if ((int) $allSub->is_backlog === 1) { $backlogs++; }
                 }
             }
+            $result->current_cgpa  = ($grandCr > 0) ? round($grandGp / $grandCr, 2) : null;
+            $result->total_credits = $grandCr;
+            $result->backlogs_count = $backlogs;
+            $result->save();
 
             \DB::commit();
         } catch (\Exception $e) {
