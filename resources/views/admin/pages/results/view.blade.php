@@ -60,8 +60,22 @@
             @foreach($sems as $si => $sem)
               <div class="card-box sem-block" data-idx="{{ $si }}">
                 <div class="d-flex justify-content-between align-items-center m-b-15">
-                  <h5 class="text-primary m-0">Semester {{ $sem->sem_code }}</h5>
-                  <button type="button" class="btn btn-sm btn-danger remove-sem"><i class="fa fa-remove"></i> Remove</button>
+                  <h5 class="text-primary m-0">
+                    Semester {{ $sem->sem_code }}
+                    @if((int)$sem->locked === 1)
+                      <span class="badge badge-success"><i class="fa fa-lock"></i> Verified &amp; Locked</span>
+                    @endif
+                  </h5>
+                  <div>
+                    @if($sem->id)
+                      @if((int)$sem->locked === 1)
+                        <a href="{{ url('admin/results/unverify-sem/'.$result->id.'/'.$sem->id) }}" class="btn btn-sm btn-warning"><i class="fa fa-unlock"></i> Unlock</a>
+                      @else
+                        <a href="{{ url('admin/results/verify-sem/'.$result->id.'/'.$sem->id) }}" class="btn btn-sm btn-success"><i class="fa fa-check"></i> Verify &amp; Lock</a>
+                      @endif
+                    @endif
+                    <button type="button" class="btn btn-sm btn-danger remove-sem" @if((int)$sem->locked === 1) disabled title="Unlock to remove" @endif><i class="fa fa-remove"></i> Remove</button>
+                  </div>
                 </div>
                 <div class="form-group row">
                   <div class="col-md-3"><input type="text" name="semesters[{{ $si }}][sem_code]" value="{{ $sem->sem_code }}" class="form-control" placeholder="Sem code"></div>

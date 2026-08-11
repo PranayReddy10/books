@@ -10,6 +10,7 @@ class ResultSemester extends Model
 
     protected $fillable = [
         'result_id', 'sem_code', 'sgpa', 'credits_earned', 'exam_month_year',
+        'verified', 'locked',
     ];
 
     public function result()

@@ -69,6 +69,8 @@ Route::group(['namespace' => 'Admin', 'prefix' => 'admin'], function () {
     Route::post('results/update/{id}', 'ResultsController@update')->middleware('adminpermission:results.edit');
     Route::get('results/verify/{id}', 'ResultsController@verify')->middleware('adminpermission:results.verify');
     Route::get('results/unverify/{id}', 'ResultsController@unverify')->middleware('adminpermission:results.verify');
+    Route::get('results/verify-sem/{id}/{semId}', 'ResultsController@verifySemester')->middleware('adminpermission:results.verify');
+    Route::get('results/unverify-sem/{id}/{semId}', 'ResultsController@unverifySemester')->middleware('adminpermission:results.verify');
     Route::get('results/regenerate/{id}', 'ResultsController@regenerate')->middleware('adminpermission:results.regenerate');
     Route::get('results/delete/{id}', 'ResultsController@delete')->middleware('adminpermission:results.delete');
     Route::get('report_cards', 'ResultsController@cards')->middleware('adminpermission:results.view');

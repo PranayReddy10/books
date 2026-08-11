@@ -2797,6 +2797,9 @@ class AndroidApiController extends MainAPIController
             'department'    => $department_name,
             'college'       => isset($user->college) ? stripslashes($user->college) : '',
             'gender'        => isset($user->gender) ? $user->gender : '',
+            'branch'        => isset($user->branch) ? stripslashes($user->branch) : '',
+            'regulation'    => isset($user->regulation) ? $user->regulation : '',
+            'degree'        => isset($user->degree) ? stripslashes($user->degree) : '',
             'rollnumber'    => isset($user->rollnumber) ? stripslashes($user->rollnumber) : '',
             'msg'           => trans('words.profile'),
             'success'       => '1'
@@ -2847,6 +2850,7 @@ class AndroidApiController extends MainAPIController
         }
 
         $sems = array();
+        $lockedCount = 0;
         foreach ($result->semesters as $sem) {
             $subs = array();
             foreach ($sem->subjects()->get() as $sub) {
@@ -2862,14 +2866,22 @@ class AndroidApiController extends MainAPIController
                     'is_backlog'   => (int) $sub->is_backlog,
                 );
             }
+            $semLocked = (int) $sem->locked;
+            if ($semLocked === 1) { $lockedCount++; }
             $sems[] = array(
+                'sem_id'          => $sem->id,
                 'sem_code'        => (string) $sem->sem_code,
                 'sgpa'            => $sem->sgpa,
                 'credits_earned'  => $sem->credits_earned,
                 'exam_month_year' => (string) $sem->exam_month_year,
+                'verified'        => (int) $sem->verified,
+                'locked'          => $semLocked,   // app renders this sem read-only when 1
                 'subjects'        => $subs,
             );
         }
+        // Whole-result "locked" now means EVERY semester is locked (so the app
+        // only hides the global add/edit entry point when nothing is editable).
+        $allLocked = (count($sems) > 0 && $lockedCount === count($sems)) ? 1 : 0;
 
         $latestCard = $result->reportCards()->orderBy('id', 'desc')->first();
 
@@ -2885,7 +2897,7 @@ class AndroidApiController extends MainAPIController
             'total_credits'    => $result->total_credits,
             'backlogs_count'   => (int) $result->backlogs_count,
             'verified'         => (int) $result->verified,
-            'locked'           => (int) $result->locked,   // app disables edit when 1
+            'locked'           => $allLocked,   // 1 only when every semester is locked
             'share_url'        => $result->share_token
                                     ? rtrim(env('APP_URL'), '/') . '/report/' . $result->share_token
                                     : '',
@@ -2914,7 +2926,12 @@ class AndroidApiController extends MainAPIController
             return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
         }
 
-        $hall = trim(isset($get_data['hall_ticket_no']) ? $get_data['hall_ticket_no'] : '');
+        // Hall ticket is the student's profile roll number (not user-entered).
+        $hall = trim(isset($user->rollnumber) ? $user->rollnumber : '');
+        if ($hall === '') {
+            // Fall back to any explicitly sent value, else fail.
+            $hall = trim(isset($get_data['hall_ticket_no']) ? $get_data['hall_ticket_no'] : '');
+        }
         if ($hall === '') {
             $response[] = array('msg' => 'Hall ticket number is required', 'success' => '0');
             return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
@@ -2927,10 +2944,18 @@ class AndroidApiController extends MainAPIController
             return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
         }
 
-        // SERVER-SIDE LOCK ENFORCEMENT: verified records can't be edited by student.
+        // Locking is now per-semester (see the tree writer below). We no longer
+        // reject the whole save when the result was verified; instead each
+        // locked semester is preserved and only unlocked ones are rewritten.
         $result = $existing ?: Result::where('user_id', $user_id)->first();
-        if ($result && (int) $result->locked === 1) {
-            $response[] = array('msg' => 'This result has been verified and can no longer be edited', 'success' => '0', 'locked' => 1);
+
+        // Owner-only + profile-completeness guard (defence in depth; the app
+        // also blocks and routes the user to Edit Profile first).
+        $uRoll   = trim(isset($user->rollnumber) ? $user->rollnumber : '');
+        $uBranch = trim(isset($user->branch) ? $user->branch : '');
+        $uReg    = trim(isset($user->regulation) ? $user->regulation : '');
+        if ($uRoll === '' || $uBranch === '' || $uReg === '') {
+            $response[] = array('msg' => 'Please complete your profile (roll number, branch, regulation) before adding results', 'success' => '0', 'need_profile' => 1);
             return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
         }
 
@@ -2957,28 +2982,51 @@ class AndroidApiController extends MainAPIController
                 $result->user_id = $user_id;
             }
             $result->student_name   = isset($get_data['student_name'])  ? $get_data['student_name']  : $user->name;
-            $result->regulation     = isset($get_data['regulation'])    ? $get_data['regulation']    : $result->regulation;
-            $result->degree         = isset($get_data['degree'])        ? $get_data['degree']        : $result->degree;
-            $result->branch         = isset($get_data['branch'])        ? $get_data['branch']        : $result->branch;
+            // Academic identity always mirrors the profile (single source of truth).
+            $result->regulation     = $uReg;
+            $result->degree         = trim(isset($user->degree) ? $user->degree : (isset($get_data['degree']) ? $get_data['degree'] : ''));
+            $result->branch         = $uBranch;
             $result->current_cgpa   = isset($get_data['current_cgpa'])  ? $get_data['current_cgpa']  : null;
             $result->total_credits  = isset($get_data['total_credits']) ? $get_data['total_credits'] : null;
             $result->backlogs_count = isset($get_data['backlogs_count'])? (int) $get_data['backlogs_count'] : 0;
             $result->save();
 
-            // Replace the whole tree.
-            $oldSemIds = ResultSemester::where('result_id', $result->id)->pluck('id')->toArray();
-            if (!empty($oldSemIds)) {
-                ResultSubject::whereIn('result_semester_id', $oldSemIds)->delete();
-                ResultSemester::where('result_id', $result->id)->delete();
+            // Lock-aware replace: keep every LOCKED semester exactly as-is, and
+            // rebuild only the unlocked ones from the incoming payload. A locked
+            // sem_code coming from the app is ignored (defence in depth) so a
+            // student can never overwrite a verified semester.
+            $lockedSemCodes = array();
+            $lockedSemIds   = array();
+            foreach ($result->semesters()->get() as $exSem) {
+                if ((int) $exSem->locked === 1) {
+                    $lockedSemCodes[strtolower(trim($exSem->sem_code))] = true;
+                    $lockedSemIds[] = $exSem->id;
+                }
+            }
+
+            // Delete only the UNLOCKED existing semesters (+ their subjects).
+            $unlockedSemIds = ResultSemester::where('result_id', $result->id)
+                ->where('locked', 0)->pluck('id')->toArray();
+            if (!empty($unlockedSemIds)) {
+                ResultSubject::whereIn('result_semester_id', $unlockedSemIds)->delete();
+                ResultSemester::whereIn('id', $unlockedSemIds)->delete();
             }
 
             foreach ($sems as $s) {
+                $code = isset($s['sem_code']) ? trim($s['sem_code']) : '';
+                // Skip any semester that is already locked — never rewrite it.
+                if ($code !== '' && isset($lockedSemCodes[strtolower($code)])) {
+                    continue;
+                }
+
                 $sem = new ResultSemester();
                 $sem->result_id       = $result->id;
-                $sem->sem_code        = isset($s['sem_code']) ? $s['sem_code'] : '';
+                $sem->sem_code        = $code;
                 $sem->sgpa            = isset($s['sgpa']) ? $s['sgpa'] : null;
                 $sem->credits_earned  = isset($s['credits_earned']) ? $s['credits_earned'] : null;
                 $sem->exam_month_year = isset($s['exam_month_year']) ? $s['exam_month_year'] : '';
+                $sem->verified        = 0;   // student-entered semesters start unverified
+                $sem->locked          = 0;
                 $sem->save();
 
                 $subjects = isset($s['subjects']) && is_array($s['subjects']) ? $s['subjects'] : array();
@@ -3116,6 +3164,19 @@ class AndroidApiController extends MainAPIController
         }
         if (isset($get_data['college']) && $get_data['college'] !== '') {
             $user_obj->college = $get_data['college'];
+        }
+        // Academic fields the Results form pulls from (roll = hall ticket).
+        if (isset($get_data['rollnumber'])) {
+            $user_obj->rollnumber = $get_data['rollnumber'];
+        }
+        if (isset($get_data['branch'])) {
+            $user_obj->branch = $get_data['branch'];
+        }
+        if (isset($get_data['regulation'])) {
+            $user_obj->regulation = $get_data['regulation'];
+        }
+        if (isset($get_data['degree'])) {
+            $user_obj->degree = $get_data['degree'];
         }
 
         if($get_data['password'])

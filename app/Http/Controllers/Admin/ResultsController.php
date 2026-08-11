@@ -159,14 +159,20 @@ class ResultsController extends MainAdminController
             $result->backlogs_count = (int) $request->input('backlogs_count', 0);
             $result->save();
 
-            // Wipe existing tree, then rebuild from the submitted arrays.
-            $oldSemIds = ResultSemester::where('result_id', $result->id)->pluck('id')->toArray();
-            if (!empty($oldSemIds)) {
-                ResultSubject::whereIn('result_semester_id', $oldSemIds)->delete();
-                ResultSemester::where('result_id', $result->id)->delete();
+            // Preserve LOCKED semesters; wipe & rebuild only unlocked ones.
+            $unlockedSemIds = ResultSemester::where('result_id', $result->id)
+                ->where('locked', 0)->pluck('id')->toArray();
+            if (!empty($unlockedSemIds)) {
+                ResultSubject::whereIn('result_semester_id', $unlockedSemIds)->delete();
+                ResultSemester::whereIn('id', $unlockedSemIds)->delete();
             }
 
-            $totals = $this->saveSemesterTree($request, $result->id);
+            $lockedCodes = ResultSemester::where('result_id', $result->id)
+                ->where('locked', 1)->pluck('sem_code')->map(function ($c) {
+                    return strtolower(trim($c));
+                })->toArray();
+
+            $totals = $this->saveSemesterTree($request, $result->id, $lockedCodes);
 
             $result->current_cgpa  = ($request->input('current_cgpa') !== null && $request->input('current_cgpa') !== '')
                                         ? $request->input('current_cgpa') : $totals['cgpa'];
@@ -195,20 +201,34 @@ class ResultsController extends MainAdminController
      * blank, and auto-fills each semester's SGPA/credits when left blank.
      * Returns computed overall ['cgpa','credits'].
      */
-    private function saveSemesterTree(Request $request, $resultId)
+    private function saveSemesterTree(Request $request, $resultId, $lockedCodes = array())
     {
         $semesters = $request->input('semesters', array());
         $subjects  = $request->input('subjects', array());
 
         $grandGp = 0.0; $grandCr = 0.0;
 
+        // Seed totals with already-locked semesters so overall CGPA stays correct.
+        foreach (ResultSemester::where('result_id', $resultId)->where('locked', 1)->get() as $lsem) {
+            foreach ($lsem->subjects()->get() as $lsub) {
+                if ($lsub->credits !== null && (float) $lsub->credits > 0) {
+                    $grandCr += (float) $lsub->credits;
+                    $grandGp += ($lsub->grade_points !== null ? (float) $lsub->grade_points : 0);
+                }
+            }
+        }
+
         foreach ($semesters as $i => $s) {
             if (empty($s['sem_code'])) { continue; }
+            // Never recreate a locked semester (it was preserved above).
+            if (in_array(strtolower(trim($s['sem_code'])), $lockedCodes, true)) { continue; }
 
             $sem = new ResultSemester();
             $sem->result_id       = $resultId;
             $sem->sem_code        = $s['sem_code'];
             $sem->exam_month_year = isset($s['exam_month_year']) ? $s['exam_month_year'] : '';
+            $sem->verified        = 0;
+            $sem->locked          = 0;
             $sem->save();
 
             $rows = isset($subjects[$i]) && is_array($subjects[$i]) ? $subjects[$i] : array();
@@ -271,6 +291,8 @@ class ResultsController extends MainAdminController
         $result->verified = 1;
         $result->locked   = 1;
         $result->save();
+        // Cascade: lock every semester.
+        ResultSemester::where('result_id', $result->id)->update(['verified' => 1, 'locked' => 1]);
         generate_result_report_card($result);
         \Session::flash('flash_message', 'Result verified and report card regenerated');
         return redirect('admin/results/view/' . $id);
@@ -282,9 +304,54 @@ class ResultsController extends MainAdminController
         $result->verified = 0;
         $result->locked   = 0;
         $result->save();
+        ResultSemester::where('result_id', $result->id)->update(['verified' => 0, 'locked' => 0]);
         generate_result_report_card($result);
         \Session::flash('flash_message', 'Result un-verified and unlocked');
         return redirect('admin/results/view/' . $id);
+    }
+
+    /** Verify + lock a SINGLE semester. */
+    public function verifySemester($id, $semId)
+    {
+        $result = Result::findOrFail($id);
+        $sem = ResultSemester::where('result_id', $result->id)->where('id', $semId)->firstOrFail();
+        $sem->verified = 1;
+        $sem->locked   = 1;
+        $sem->save();
+        // Whole result counts as verified once ANY semester is verified.
+        if (!$result->verified) { $result->verified = 1; $result->save(); }
+        // Whole-result "locked" is true only when every semester is locked.
+        $this->syncResultLock($result);
+        generate_result_report_card($result);
+        \Session::flash('flash_message', 'Semester ' . $sem->sem_code . ' verified and locked');
+        return redirect('admin/results/view/' . $id);
+    }
+
+    /** Un-verify + unlock a SINGLE semester. */
+    public function unverifySemester($id, $semId)
+    {
+        $result = Result::findOrFail($id);
+        $sem = ResultSemester::where('result_id', $result->id)->where('id', $semId)->firstOrFail();
+        $sem->verified = 0;
+        $sem->locked   = 0;
+        $sem->save();
+        // If no semester remains verified, the whole result is unverified.
+        $anyVerified = ResultSemester::where('result_id', $result->id)->where('verified', 1)->exists();
+        $result->verified = $anyVerified ? 1 : 0;
+        $result->save();
+        $this->syncResultLock($result);
+        generate_result_report_card($result);
+        \Session::flash('flash_message', 'Semester ' . $sem->sem_code . ' unlocked');
+        return redirect('admin/results/view/' . $id);
+    }
+
+    /** results.locked = 1 only when every semester is locked (and >=1 exists). */
+    private function syncResultLock($result)
+    {
+        $total  = ResultSemester::where('result_id', $result->id)->count();
+        $locked = ResultSemester::where('result_id', $result->id)->where('locked', 1)->count();
+        $result->locked = ($total > 0 && $locked === $total) ? 1 : 0;
+        $result->save();
     }
 
     public function regenerate($id)
