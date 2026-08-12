@@ -1441,24 +1441,25 @@ if (!function_exists('jntuh_grade_value')) {
 
 if (!function_exists('jntuh_subject_grade_points')) {
     /**
-     * Credit points for a subject = credits * grade-value.
-     * Returns null if either input is missing/unknown.
+     * JNTUH "Grade Point (Gi)" for a subject = the grade VALUE only
+     * (O=10, A+=9, A=8, B+=7, B=6, C=5, F/Ab=0). This is what the memo shows
+     * per subject; it is NOT multiplied by credits here. The credit-weighting
+     * (Gi x Ci) happens only inside SGPA/CGPA (see jntuh_compute_sgpa).
+     * $credits is accepted for signature compatibility but is not used.
+     * Returns null for an unknown grade.
      */
-    function jntuh_subject_grade_points($grade, $credits)
+    function jntuh_subject_grade_points($grade, $credits = null)
     {
-        $val = jntuh_grade_value($grade);
-        if ($val === null || $credits === null || $credits === '') {
-            return null;
-        }
-        return round(((float) $credits) * $val, 2);
+        return jntuh_grade_value($grade); // null if grade unknown
     }
 }
 
 if (!function_exists('jntuh_compute_sgpa')) {
     /**
-     * SGPA = sum(grade_points) / sum(credits) for a set of subject arrays,
-     * each having 'credits' and 'grade_points' (or 'grade' to derive).
-     * Returns null when there are no credits.
+     * SGPA = sum(Gi * Ci) / sum(Ci), where Gi is the subject grade value
+     * (grade_points column now stores Gi) and Ci is credits. Subjects with
+     * 0 credits (F/Ab, mandatory non-credit) are excluded. Returns null when
+     * there are no credits.
      */
     function jntuh_compute_sgpa($subjects)
     {
@@ -1466,11 +1467,12 @@ if (!function_exists('jntuh_compute_sgpa')) {
         foreach ($subjects as $s) {
             $cr = isset($s['credits']) && $s['credits'] !== '' ? (float) $s['credits'] : 0;
             if ($cr <= 0) { continue; }
-            $gp = isset($s['grade_points']) && $s['grade_points'] !== ''
+            // Gi (grade value). Prefer an explicit grade_points, else derive.
+            $gi = isset($s['grade_points']) && $s['grade_points'] !== ''
                     ? (float) $s['grade_points']
-                    : jntuh_subject_grade_points(isset($s['grade']) ? $s['grade'] : '', $cr);
-            if ($gp === null) { $gp = 0; }
-            $sumGp += $gp;
+                    : jntuh_grade_value(isset($s['grade']) ? $s['grade'] : '');
+            if ($gi === null) { $gi = 0; }
+            $sumGp += $gi * $cr;   // credit-weighted here
             $sumCr += $cr;
         }
         if ($sumCr <= 0) { return null; }

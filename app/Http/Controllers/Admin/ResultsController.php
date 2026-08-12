@@ -225,11 +225,13 @@ class ResultsController extends MainAdminController
         $grandGp = 0.0; $grandCr = 0.0;
 
         // Seed totals with already-locked semesters so overall CGPA stays correct.
+        // grade_points stores Gi (grade value); weight by credits here.
         foreach (ResultSemester::where('result_id', $resultId)->where('locked', 1)->get() as $lsem) {
             foreach ($lsem->subjects()->get() as $lsub) {
                 if ($lsub->credits !== null && (float) $lsub->credits > 0) {
-                    $grandCr += (float) $lsub->credits;
-                    $grandGp += ($lsub->grade_points !== null ? (float) $lsub->grade_points : 0);
+                    $lcr = (float) $lsub->credits;
+                    $grandCr += $lcr;
+                    $grandGp += ($lsub->grade_points !== null ? (float) $lsub->grade_points : 0) * $lcr;
                 }
             }
         }
@@ -256,11 +258,12 @@ class ResultsController extends MainAdminController
                 $credits = (isset($sub['credits']) && $sub['credits'] !== '') ? (float) $sub['credits'] : null;
                 $grade   = isset($sub['grade']) ? $sub['grade'] : '';
 
-                // grade_points: admin override wins, else auto from grade x credits.
+                // grade_points now stores Gi (grade value only). Admin override
+                // wins, else derive from the grade.
                 if (isset($sub['grade_points']) && $sub['grade_points'] !== '') {
                     $gp = (float) $sub['grade_points'];
                 } else {
-                    $gp = jntuh_subject_grade_points($grade, $credits);
+                    $gp = jntuh_subject_grade_points($grade, $credits); // returns Gi
                 }
 
                 $row = new ResultSubject();
@@ -278,7 +281,7 @@ class ResultsController extends MainAdminController
 
                 if ($credits !== null && $credits > 0) {
                     $semCr += $credits;
-                    $semGp += ($gp !== null ? $gp : 0);
+                    $semGp += ($gp !== null ? $gp : 0) * $credits;
                 }
             }
 
@@ -362,6 +365,47 @@ class ResultsController extends MainAdminController
     }
 
     /** results.locked = 1 only when every semester is locked (and >=1 exists). */
+    /**
+     * One-time recompute for ALL stored results after the grade_points meaning
+     * changed to Gi (grade value). For every subject, grade_points is reset to
+     * the grade value; then each semester's SGPA/credits and the overall
+     * CGPA/credits/backlogs are recomputed with SGPA = sum(Gi*Ci)/sum(Ci).
+     */
+    public function recomputeAll()
+    {
+        $count = 0;
+        foreach (Result::all() as $result) {
+            $grandGp = 0.0; $grandCr = 0.0; $backlogs = 0;
+            foreach (ResultSemester::where('result_id', $result->id)->get() as $sem) {
+                $semGp = 0.0; $semCr = 0.0;
+                foreach ($sem->subjects()->get() as $sub) {
+                    // Reset grade_points to Gi (grade value only).
+                    $gi = jntuh_grade_value($sub->grade);
+                    $sub->grade_points = $gi;   // may be null for unknown grade
+                    $sub->save();
+
+                    $cr = ($sub->credits !== null) ? (float) $sub->credits : 0.0;
+                    if ($cr > 0) {
+                        $g = ($gi !== null) ? (float) $gi : 0.0;
+                        $semGp += $g * $cr; $semCr += $cr;
+                        $grandGp += $g * $cr; $grandCr += $cr;
+                    }
+                    if ((int) $sub->is_backlog === 1) { $backlogs++; }
+                }
+                $sem->sgpa = ($semCr > 0) ? round($semGp / $semCr, 2) : null;
+                $sem->credits_earned = ($semCr > 0) ? $semCr : null;
+                $sem->save();
+            }
+            $result->current_cgpa   = ($grandCr > 0) ? round($grandGp / $grandCr, 2) : null;
+            $result->total_credits  = ($grandCr > 0) ? $grandCr : null;
+            $result->backlogs_count = $backlogs;
+            $result->save();
+            $count++;
+        }
+        \Session::flash('flash_message', "Recomputed {$count} result(s) with the corrected grade-point formula.");
+        return redirect('admin/results');
+    }
+
     private function syncResultLock($result)
     {
         $total  = ResultSemester::where('result_id', $result->id)->count();

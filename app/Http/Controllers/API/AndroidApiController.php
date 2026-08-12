@@ -3062,13 +3062,13 @@ class AndroidApiController extends MainAPIController
                     $row->is_backlog   = isset($sub['is_backlog']) ? (int) $sub['is_backlog'] : 0;
                     $row->save();
 
-                    // JNTUH SGPA/CGPA: sum(grade_point * credits) / sum(credits),
-                    // counting only subjects that carry credits > 0 (F/Ab with 0
-                    // credits and mandatory 0-credit courses are excluded).
+                    // JNTUH SGPA = sum(Gi * Ci) / sum(Ci). grade_points now stores
+                    // Gi (grade value), so multiply by credits here. Subjects with
+                    // 0 credits (F/Ab, mandatory) are excluded.
                     $cr = ($row->credits !== null) ? (float) $row->credits : 0.0;
                     if ($cr > 0) {
-                        $gp = ($row->grade_points !== null) ? (float) $row->grade_points : 0.0;
-                        $semGp += $gp; $semCr += $cr;
+                        $gi = ($row->grade_points !== null) ? (float) $row->grade_points : 0.0;
+                        $semGp += $gi * $cr; $semCr += $cr;
                     }
                 }
                 // Persist this semester's SGPA + credits earned.
@@ -3083,8 +3083,8 @@ class AndroidApiController extends MainAPIController
                 foreach ($allSem->subjects()->get() as $allSub) {
                     $cr = ($allSub->credits !== null) ? (float) $allSub->credits : 0.0;
                     if ($cr > 0) {
-                        $gp = ($allSub->grade_points !== null) ? (float) $allSub->grade_points : 0.0;
-                        $grandGp += $gp; $grandCr += $cr;
+                        $gi = ($allSub->grade_points !== null) ? (float) $allSub->grade_points : 0.0;
+                        $grandGp += $gi * $cr; $grandCr += $cr;
                     }
                     if ((int) $allSub->is_backlog === 1) { $backlogs++; }
                 }
