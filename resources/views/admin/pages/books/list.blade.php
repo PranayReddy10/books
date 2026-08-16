@@ -149,7 +149,7 @@
                             </div>
  
                             <div class="card-body p-3">
-                                <h4 class="card-title book_title mb-3 align-items-center">{{ stripslashes($data->title) }}</h4>
+                                <h4 class="card-title book_title mb-3 align-items-center">@if(isset($data->content_type) && $data->content_type=='video')<span style="background:#e53935;color:#fff;font-size:10px;padding:2px 7px;border-radius:4px;margin-right:6px;vertical-align:middle"><i class="fa fa-play"></i> VIDEO</span>@endif{{ stripslashes($data->title) }}</h4>
 								<div class="d-flex wall_preview_item">
                                   <ul>
                                     <li><a href="javascript:void(0)" data-toggle="tooltip" title="{{$data->featured?'Remove Slider':'Set Slider'}}" data-id="{{$data->id}}" data-value="{{$data->featured?'false':'true'}}" class="slider_enable_disable" style="{{$data->featured?'color: green':''}}" id="slider_id{{$data->id}}"><i class="fa fa-sliders"></i></a></li> 

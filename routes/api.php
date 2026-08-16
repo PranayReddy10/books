@@ -28,6 +28,12 @@ Route::group(['prefix' => 'v1','namespace' => 'API'], function(){
     Route::post('result_save',     'AndroidApiController@result_save');
     Route::post('report_generate', 'AndroidApiController@report_generate');
 
+    // Shop (MadeForU WooCommerce proxy — read-only; buying happens on the web).
+    Route::post('shop_categories',     'ShopController@shop_categories');
+    Route::post('shop_products',       'ShopController@shop_products');
+    Route::post('shop_product_detail', 'ShopController@shop_product_detail');
+    Route::post('shop_links',          'ShopController@shop_links');
+
     
     Route::post('home', 'AndroidApiController@home');
     Route::post('home_section', 'AndroidApiController@home_section');    

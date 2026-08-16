@@ -77,6 +77,21 @@ class ResultsController extends MainAdminController
         $cards = ReportCard::where('result_id', $id)->orderBy('id', 'DESC')->get();
         $universities = University::orderBy('university_name')->get();
         $users = User::where('usertype', 'User')->orderBy('id', 'DESC')->limit(2000)->get();
+        // Fill blank student details from the linked user's profile so the view
+        // always shows current identity (results source identity from profile).
+        $linkedUser = $result->user_id ? User::find($result->user_id) : null;
+        if (!$linkedUser && $result->hall_ticket_no) {
+            $linkedUser = User::where('rollnumber', $result->hall_ticket_no)->first();
+        }
+        if ($linkedUser) {
+            if (!$result->student_name)   { $result->student_name   = $linkedUser->name; }
+            if (!$result->hall_ticket_no) { $result->hall_ticket_no = $linkedUser->rollnumber; }
+            if (!$result->regulation)     { $result->regulation     = $linkedUser->regulation; }
+            if (!$result->degree)         { $result->degree         = $linkedUser->degree; }
+            if (!$result->branch && $linkedUser->department_id) {
+                $result->branch = \App\Department::getDepartmentInfo($linkedUser->department_id, 'department_name');
+            }
+        }
         $page_title = 'View Result';
         return view('admin.pages.results.view', compact('page_title', 'result', 'sems', 'cards', 'universities', 'users'));
     }

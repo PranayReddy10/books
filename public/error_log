@@ -3,3 +3,5 @@
 [31-Jul-2026 11:05:39 Asia/Kolkata] PHP Fatal error:  Trait "Illuminate\Foundation\Auth\RegistersUsers" not found in /home4/globalqu/public_html/jntuapp/newjntuh/app/Http/Controllers/Auth/RegisterController.php on line 14
 [31-Jul-2026 11:07:45 Asia/Kolkata] PHP Fatal error:  Trait "Illuminate\Foundation\Auth\RegistersUsers" not found in /home4/globalqu/public_html/jntuapp/newjntuh/app/Http/Controllers/Auth/RegisterController.php on line 14
 [31-Jul-2026 11:08:01 Asia/Kolkata] PHP Fatal error:  Trait "Illuminate\Foundation\Auth\RegistersUsers" not found in /home4/globalqu/public_html/jntuapp/newjntuh/app/Http/Controllers/Auth/RegisterController.php on line 14
+[13-Aug-2026 15:32:27 Asia/Kolkata] PHP Deprecated:  Using ${var} in strings is deprecated, use {$var} instead in /home4/globalqu/public_html/jntuapp/newjntuh/public/stripe-php/lib/ApiResource.php on line 87
+[13-Aug-2026 15:32:27 Asia/Kolkata] PHP Deprecated:  Using ${var} in strings is deprecated, use {$var} instead in /home4/globalqu/public_html/jntuapp/newjntuh/public/stripe-php/lib/SingletonApiResource.php on line 28

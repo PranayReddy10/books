@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Aug 10, 2026 at 11:50 PM
+-- Generation Time: Aug 16, 2026 at 01:34 PM
 -- Server version: 5.7.23-23
 -- PHP Version: 8.1.34
 
@@ -431,6 +431,8 @@ CREATE TABLE `result_semesters` (
   `sgpa` decimal(4,2) DEFAULT NULL,
   `credits_earned` decimal(6,1) DEFAULT NULL,
   `exam_month_year` varchar(30) DEFAULT NULL,
+  `verified` tinyint(1) NOT NULL DEFAULT '0',
+  `locked` tinyint(1) NOT NULL DEFAULT '0',
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -659,6 +661,8 @@ CREATE TABLE `users` (
   `gender` varchar(255) CHARACTER SET latin1 DEFAULT NULL,
   `college` varchar(255) CHARACTER SET latin1 DEFAULT NULL,
   `branch` varchar(255) CHARACTER SET latin1 DEFAULT NULL,
+  `regulation` varchar(10) DEFAULT NULL,
+  `degree` varchar(30) DEFAULT NULL,
   `department_id` bigint(20) UNSIGNED DEFAULT NULL,
   `phone` varchar(255) CHARACTER SET latin1 DEFAULT NULL,
   `user_image` varchar(255) CHARACTER SET latin1 DEFAULT NULL,

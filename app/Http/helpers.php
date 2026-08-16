@@ -1227,6 +1227,29 @@ if (!function_exists('generate_username')) {
     }
 }
 
+if (!function_exists('onesignal_endpoint_and_auth')) {
+    /**
+     * Resolve the correct OneSignal endpoint + Authorization header for a key.
+     * New "rich" App API keys start with os_v2_ and use api.onesignal.com with
+     * "Key <key>"; legacy keys use onesignal.com/api/v1 with "Basic <key>".
+     * Returns array('url' => ..., 'auth' => ...).
+     */
+    function onesignal_endpoint_and_auth($key)
+    {
+        $key = trim((string) $key);
+        if (strpos($key, 'os_v2_') === 0) {
+            return array(
+                'url'  => 'https://api.onesignal.com/notifications',
+                'auth' => 'Authorization: Key ' . $key,
+            );
+        }
+        return array(
+            'url'  => 'https://onesignal.com/api/v1/notifications',
+            'auth' => 'Authorization: Basic ' . $key,
+        );
+    }
+}
+
 if (!function_exists('send_media_notification')) {
     /**
      * Send a OneSignal push for a media post. Tapping it should open the post
@@ -1261,10 +1284,14 @@ if (!function_exists('send_media_notification')) {
         }
 
         $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
+        // OneSignal "rich" API migration (legacy keys deprecated Q1 2026).
+        $osauth = onesignal_endpoint_and_auth($settings->onesignal_rest_key);
+        $url = $osauth['url'];
+        curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_HTTPHEADER, array(
             'Content-Type: application/json; charset=utf-8',
-            'Authorization: Basic ' . $settings->onesignal_rest_key,
+            'Accept: application/json',
+            $osauth['auth'],
         ));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
         curl_setopt($ch, CURLOPT_HEADER, FALSE);
@@ -1272,7 +1299,19 @@ if (!function_exists('send_media_notification')) {
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
         $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlErr  = curl_error($ch);
         curl_close($ch);
+
+        // Don't fail silently: log non-2xx so a bad/expired key is visible.
+        if ($curlErr || $httpCode < 200 || $httpCode >= 300) {
+            \Log::warning('OneSignal push failed', array(
+                'http_code' => $httpCode,
+                'curl_error' => $curlErr,
+                'response' => is_string($response) ? substr($response, 0, 500) : $response,
+                'endpoint' => $url,
+            ));
+        }
 
         return $response;
     }
@@ -1666,3 +1705,66 @@ if (!function_exists('generate_result_report_card')) {
     }
 }
 
+
+if (!function_exists('woo_get')) {
+    /**
+     * Read-only GET against the MadeForU WooCommerce REST API, with short-lived
+     * caching so we don't hammer the store on every app open. Auth is sent as
+     * Basic (consumer key/secret) over HTTPS. Returns a decoded array, or []
+     * on any failure (never throws into the app response).
+     *
+     * @param string $path  e.g. 'products', 'products/categories'
+     * @param array  $query e.g. ['per_page' => 20, 'category' => 15]
+     * @param int    $ttl   cache seconds (default 300 = 5 min)
+     */
+    function woo_get($path, $query = array(), $ttl = 300)
+    {
+        $cfg = config('services.woocommerce');
+        if (empty($cfg['base']) || empty($cfg['key']) || empty($cfg['secret'])) {
+            return array();
+        }
+
+        $url = rtrim($cfg['base'], '/') . '/wp-json/wc/v3/' . ltrim($path, '/');
+        if (!empty($query)) {
+            $url .= '?' . http_build_query($query);
+        }
+
+        $cacheKey = 'woo_' . md5($url);
+        try {
+            return \Cache::remember($cacheKey, $ttl, function () use ($url, $cfg) {
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $url);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, array('Accept: application/json'));
+                curl_setopt($ch, CURLOPT_USERPWD, $cfg['key'] . ':' . $cfg['secret']);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, TRUE);
+                $body = curl_exec($ch);
+                $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $err  = curl_error($ch);
+                curl_close($ch);
+
+                if ($err || $code < 200 || $code >= 300) {
+                    \Log::warning('WooCommerce fetch failed', array(
+                        'url' => $url, 'http_code' => $code, 'curl_error' => $err,
+                    ));
+                    return array();
+                }
+                $decoded = json_decode($body, true);
+                return is_array($decoded) ? $decoded : array();
+            });
+        } catch (\Exception $e) {
+            \Log::warning('WooCommerce cache/get error: ' . $e->getMessage());
+            return array();
+        }
+    }
+}
+
+if (!function_exists('woo_price')) {
+    /** Format a Woo price string to a clean number string (no trailing noise). */
+    function woo_price($v)
+    {
+        if ($v === null || $v === '') { return ''; }
+        return rtrim(rtrim(number_format((float) $v, 2, '.', ''), '0'), '.');
+    }
+}

@@ -418,9 +418,11 @@ class SettingsController extends MainAdminController
                 //print($fields);
 
                 $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
+                $osauth = onesignal_endpoint_and_auth($onesignal_rest_key);
+                curl_setopt($ch, CURLOPT_URL, $osauth['url']);
                 curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json; charset=utf-8',
-                                                           'Authorization: Basic '.$onesignal_rest_key));
+                                                           'Accept: application/json',
+                                                           $osauth['auth']));
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
                 curl_setopt($ch, CURLOPT_HEADER, FALSE);
                 curl_setopt($ch, CURLOPT_POST, TRUE);
@@ -449,9 +451,11 @@ class SettingsController extends MainAdminController
             //print($fields);
 
             $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, "https://onesignal.com/api/v1/notifications");
+            $osauth = onesignal_endpoint_and_auth($onesignal_rest_key);
+            curl_setopt($ch, CURLOPT_URL, $osauth['url']);
             curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json; charset=utf-8',
-                                                       'Authorization: Basic '.$onesignal_rest_key));
+                                                       'Accept: application/json',
+                                                       $osauth['auth']));
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
             curl_setopt($ch, CURLOPT_HEADER, FALSE);
             curl_setopt($ch, CURLOPT_POST, TRUE);

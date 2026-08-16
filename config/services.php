@@ -31,4 +31,16 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // MadeForU WooCommerce store (read-only product data for the app Shop tab).
+    // Generate a READ-ONLY key: WooCommerce -> Settings -> Advanced -> REST API.
+    // Keep these on the server only; never ship them in the Android app.
+    'woocommerce' => [
+        'base'   => env('WOO_BASE', 'https://madeforu.co.in'),
+        'key'    => env('WOO_CONSUMER_KEY'),
+        'secret' => env('WOO_CONSUMER_SECRET'),
+        // Web URLs the app opens in a WebView for buying / tracking.
+        'shop_url'  => env('WOO_SHOP_URL', 'https://madeforu.co.in/shop/'),
+        'track_url' => env('WOO_TRACK_URL', 'https://madeforu.co.in/tracking-order/'),
+    ],
+
 ];

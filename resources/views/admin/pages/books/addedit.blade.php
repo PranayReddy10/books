@@ -158,6 +158,18 @@
                   @endif  
 
                   <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">Content Type</label>
+                      <div class="col-sm-8">
+                            <select class="form-control" name="content_type" id="content_type" onchange="toggleContentType()">
+                                <option value="book" @if(!isset($info->content_type) || $info->content_type=="book") selected @endif>📖 Book (PDF / EPUB)</option>
+                                <option value="video" @if(isset($info->content_type) AND $info->content_type=="video") selected @endif>▶ Video (YouTube)</option>
+                            </select>
+                            <small class="form-text text-muted">Choose whether this is a readable book or a YouTube video.</small>
+                      </div>
+                  </div>
+
+                  <div id="book_content_fields">
+                  <div class="form-group row">
                     <label class="col-sm-3 col-form-label">{{trans('words.upload_type')}}</label>
                       <div class="col-sm-8">
                             <select class="form-control" name="url_type" id="upload_type">                               
@@ -205,6 +217,19 @@
                       @if(isset($info->url_type) AND $info->url_type=="server_url" AND !empty($info->url))
                         <small class="form-text text-muted">Current: {{ $info->url }}</small>
                       @endif
+                    </div>
+                  </div>
+                  </div>{{-- /book_content_fields --}}
+
+                  <div id="video_content_fields" style="display:none;">
+                    <div class="form-group row">
+                      <label class="col-sm-3 col-form-label">YouTube URL
+                        <small class="form-text text-muted">Paste any YouTube link.</small>
+                      </label>
+                      <div class="col-sm-8">
+                        <input type="text" name="youtube_url" id="youtube_url" value="@if(isset($info->content_type) AND $info->content_type=='video'){{ $info->url }}@endif" class="form-control" placeholder="https://www.youtube.com/watch?v=...">
+                        <small class="form-text text-muted">We auto-use the YouTube thumbnail as the cover if you don't upload one.</small>
+                      </div>
                     </div>
                   </div>
                   <div class="form-group row">
@@ -469,6 +494,20 @@ function toggleBookImage(){
   if(no && no.checked){ row.style.display='none'; } else { row.style.display=''; }
 }
 window.addEventListener('load', toggleBookImage);
+
+function toggleContentType(){
+  var ct = document.getElementById('content_type');
+  var bookFields = document.getElementById('book_content_fields');
+  var videoFields = document.getElementById('video_content_fields');
+  if(ct && ct.value === 'video'){
+    if(bookFields) bookFields.style.display = 'none';
+    if(videoFields) videoFields.style.display = '';
+  } else {
+    if(bookFields) bookFields.style.display = '';
+    if(videoFields) videoFields.style.display = 'none';
+  }
+}
+window.addEventListener('load', toggleContentType);
 </script>
 
 @endsection
