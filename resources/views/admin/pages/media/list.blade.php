@@ -57,6 +57,8 @@
                     <div class="media-thumb">
                     @if($post->media_type=='photo')
                       <img src="{{ $post->file_url }}" onerror="this.style.display='none'">
+                    @elseif($post->media_type=='text')
+                      <span class="play-dot"><i class="fa fa-align-left"></i></span>
                     @else
                       @if($post->thumb_url)
                         <img src="{{ $post->thumb_url }}" onerror="this.style.display='none'">
@@ -67,6 +69,7 @@
                   </td>
                   <td>
                     @if($post->media_type=='photo')<span class="badge badge-info"><i class="fa fa-image"></i> Photo</span>
+                    @elseif($post->media_type=='text')<span class="badge badge-secondary"><i class="fa fa-align-left"></i> Text</span>
                     @else<span class="badge badge-dark"><i class="fa fa-video-camera"></i> Video</span>@endif
                   </td>
                   <td>

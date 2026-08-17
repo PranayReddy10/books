@@ -3,7 +3,7 @@
 @section('meta_title', ($post->title ? stripslashes($post->title).' — ' : 'Post — ').'JNTU Books')
 @section('meta_description', Str::limit(strip_tags(stripslashes($post->description ?: $post->title)), 155) ?: 'A student post on JNTU Books.')
 @section('og_type', $post->media_type=='video' ? 'video.other' : 'article')
-@section('og_image', $post->media_type=='video' ? ($post->thumb_url ?: '') : $post->file_url)
+@section('og_image', $post->media_type=='video' ? ($post->thumb_url ?: '') : ($post->file_url ?: ''))
 
 @section('head')
 <style>
@@ -41,13 +41,17 @@
         <span>{{ $post->created_at ? $post->created_at->format('d M Y, h:i A') : '' }}</span>
       </div>
     </div>
+    @if($post->file_url)
     <div class="media">
       @if($post->media_type=='video')
         <video src="{{ $post->file_url }}" controls preload="metadata" @if($post->thumb_url) poster="{{ $post->thumb_url }}" @endif></video>
       @else
-        <img src="{{ $post->file_url }}" alt="{{ $post->title ?: 'Student post' }}">
+        @foreach($post->allImages() as $img)
+          <img src="{{ $img }}" alt="{{ $post->title ?: 'Student post' }}">
+        @endforeach
       @endif
     </div>
+    @endif
     <div class="body">
       @if($post->title)<div style="font-family:'Sora';font-weight:600;font-size:17px">{{ stripslashes($post->title) }}</div>@endif
       @if($post->description && trim(strip_tags(stripslashes($post->description))) != '')<div style="color:#3a3d63;margin-top:6px">{{ trim(strip_tags(stripslashes($post->description))) }}</div>@endif
