@@ -37,6 +37,7 @@ use Illuminate\Http\Request;
 use App\Http\Requests;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Facades\Image; 
 use Illuminate\Support\Str;
@@ -2272,8 +2273,13 @@ class AndroidApiController extends MainAPIController
         // Photos beyond the first arrive as extra_files[] — a separate field on purpose:
         // reusing media_file[] would collide with the scalar media_file in $_FILES.
         // Cap: 5 extras, so a post holds at most 6 photos.
+        //
+        // If the code is live but the migration has not been run yet, media_posts has no
+        // extra_images column. Skip the extras rather than uploading files we cannot record
+        // (and rather than throwing) — the post still goes through with its cover photo.
+        $has_extra_column = Schema::hasColumn('media_posts', 'extra_images');
         $extra_images = array();
-        if ($media_type == 'photo') {
+        if ($media_type == 'photo' && $has_extra_column) {
             $extras = $request->file('extra_files');
             if ($extras && !is_array($extras)) {
                 $extras = array($extras);
@@ -2318,11 +2324,26 @@ class AndroidApiController extends MainAPIController
         $post->description    = addslashes($description);
         $post->file_url       = $file_url;
         $post->thumb_url      = $thumb_url ?: null;
-        $post->extra_images   = !empty($extra_images) ? json_encode(array_values($extra_images)) : null;
+        if ($has_extra_column) {
+            $post->extra_images = !empty($extra_images) ? json_encode(array_values($extra_images)) : null;
+        }
         $post->is_admin_upload = 0;
         $post->upload_status  = $is_verified ? 'approved' : 'pending';
         $post->status         = $is_verified ? 1 : 0;
-        $post->save();
+
+        try {
+            $post->save();
+        } catch (\Exception $e) {
+            // Almost always a schema that predates this feature: media_type still ENUM
+            // ('photo','video') so 'text' will not store, or file_url still NOT NULL.
+            // Say so instead of returning a bare 500 the app can only show as "try again".
+            \Log::error('media_upload save failed: ' . $e->getMessage());
+            $msg = ($media_type == 'text')
+                ? 'Text posts are not enabled on the server yet. Please run the pending database update.'
+                : 'Could not save the post. Please run the pending database update and try again.';
+            $response[] = array('msg' => $msg, 'success' => '0');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
 
         $msg = $is_verified
             ? 'Uploaded successfully. It is now live.'
