@@ -2150,7 +2150,7 @@ class AndroidApiController extends MainAPIController
         $type  = isset($get_data['media_type']) ? $get_data['media_type'] : ''; // '' = all
 
         $query = MediaPost::where('status', 1)->where('upload_status', 'approved');
-        if (in_array($type, ['photo', 'video'])) {
+        if (in_array($type, ['photo', 'video', 'text'])) {
             $query->where('media_type', $type);
         }
         $data_list = $query->orderBy('id', 'DESC')->paginate($this->pagination_limit, ['*'], 'page', $page);
@@ -2171,8 +2171,11 @@ class AndroidApiController extends MainAPIController
                 'link_url'       => $obj->link_url ?: '',
                 'book_id'        => $obj->book_id ? (string)$obj->book_id : '',
                 'book_title'     => $obj->book_id ? stripslashes((string)\App\Books::where('id', $obj->book_id)->value('title')) : '',
-                'file_url'       => $obj->file_url,
+                'file_url'       => $obj->file_url ?: '',
                 'thumb_url'      => $obj->thumb_url ?: '',
+                // Every photo on the post, cover first. Single-image and text posts
+                // still work off file_url, so older builds are unaffected.
+                'images'         => $obj->allImages(),
                 'uploaded_by'    => $obj->uploaderName(),
                 'is_admin'       => $obj->is_admin_upload ? '1' : '0',
                 // feature toggles
@@ -2212,8 +2215,13 @@ class AndroidApiController extends MainAPIController
             $response[] = array('msg' => 'Invalid user', 'success' => '0');
             return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
         }
-        if (!in_array($media_type, ['photo', 'video'])) {
+        if (!in_array($media_type, ['photo', 'video', 'text'])) {
             $response[] = array('msg' => 'Invalid media type', 'success' => '0');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+        // A text post carries no file, so it must at least carry words.
+        if ($media_type == 'text' && trim($title) === '' && trim($description) === '') {
+            $response[] = array('msg' => 'Write something to post', 'success' => '0');
             return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
         }
 
@@ -2223,15 +2231,20 @@ class AndroidApiController extends MainAPIController
             return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
         }
 
+        $imageExts = array('jpg', 'jpeg', 'png', 'gif', 'webp');
+        $videoExts = array('mp4', 'mov', 'webm', 'm4v');
+
         $media_file = $request->file('media_file');
-        if (!$media_file) {
+        if (!$media_file && $media_type != 'text') {
             $response[] = array('msg' => 'No file uploaded', 'success' => '0');
             return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
         }
+        // A file that arrives on a text post means the app mislabelled it; trust the file.
+        if ($media_file && $media_type == 'text') {
+            $media_type = 'photo';
+        }
 
-        $ext = strtolower($media_file->getClientOriginalExtension());
-        $imageExts = array('jpg', 'jpeg', 'png', 'gif', 'webp');
-        $videoExts = array('mp4', 'mov', 'webm', 'm4v');
+        $ext = $media_file ? strtolower($media_file->getClientOriginalExtension()) : '';
 
         if ($media_type == 'photo' && !in_array($ext, $imageExts)) {
             $response[] = array('msg' => 'Only JPG, PNG, GIF or WEBP images are allowed', 'success' => '0');
@@ -2244,14 +2257,45 @@ class AndroidApiController extends MainAPIController
 
         // size cap: 10MB photos, 100MB videos
         $maxSize = ($media_type == 'video') ? 104857600 : 10485760;
-        if ($media_file->getSize() > $maxSize) {
+        if ($media_file && $media_file->getSize() > $maxSize) {
             $limit = ($media_type == 'video') ? '100MB' : '10MB';
             $response[] = array('msg' => 'File too large (max ' . $limit . ')', 'success' => '0');
             return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
         }
 
-        $fileName = Str::slug(substr($title ?: 'media', 0, 40), '-') . '-' . md5(time() . $user_id) . '.' . $ext;
-        $file_url = spaces_upload($media_file, 'media/' . $media_type . 's', $fileName);
+        $file_url = null;
+        if ($media_file) {
+            $fileName = Str::slug(substr($title ?: 'media', 0, 40), '-') . '-' . md5(time() . $user_id) . '.' . $ext;
+            $file_url = spaces_upload($media_file, 'media/' . $media_type . 's', $fileName);
+        }
+
+        // Photos beyond the first arrive as extra_files[] — a separate field on purpose:
+        // reusing media_file[] would collide with the scalar media_file in $_FILES.
+        // Cap: 5 extras, so a post holds at most 6 photos.
+        $extra_images = array();
+        if ($media_type == 'photo') {
+            $extras = $request->file('extra_files');
+            if ($extras && !is_array($extras)) {
+                $extras = array($extras);
+            }
+            if (is_array($extras)) {
+                foreach ($extras as $index => $extra) {
+                    if (count($extra_images) >= 5) {
+                        break;
+                    }
+                    if (!$extra || !$extra->isValid()) {
+                        continue;
+                    }
+                    $eext = strtolower($extra->getClientOriginalExtension());
+                    if (!in_array($eext, $imageExts) || $extra->getSize() > 10485760) {
+                        continue;
+                    }
+                    $eName = Str::slug(substr($title ?: 'media', 0, 40), '-')
+                        . '-' . md5(time() . $user_id . $index) . '.' . $eext;
+                    $extra_images[] = spaces_upload($extra, 'media/photos', $eName);
+                }
+            }
+        }
 
         // optional thumbnail (for videos)
         $thumb_url = '';
@@ -2274,6 +2318,7 @@ class AndroidApiController extends MainAPIController
         $post->description    = addslashes($description);
         $post->file_url       = $file_url;
         $post->thumb_url      = $thumb_url ?: null;
+        $post->extra_images   = !empty($extra_images) ? json_encode(array_values($extra_images)) : null;
         $post->is_admin_upload = 0;
         $post->upload_status  = $is_verified ? 'approved' : 'pending';
         $post->status         = $is_verified ? 1 : 0;
@@ -2301,8 +2346,9 @@ class AndroidApiController extends MainAPIController
                 'post_id'       => $obj->id,
                 'media_type'    => $obj->media_type,
                 'title'         => stripslashes($obj->title),
-                'file_url'      => $obj->file_url,
+                'file_url'      => $obj->file_url ?: '',
                 'thumb_url'     => $obj->thumb_url ?: '',
+                'images'        => $obj->allImages(),
                 'upload_status' => $obj->upload_status,
                 'reject_reason' => $obj->reject_reason,
             );

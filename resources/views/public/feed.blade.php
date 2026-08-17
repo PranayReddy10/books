@@ -50,6 +50,7 @@
             <span>{{ $p->created_at ? $p->created_at->diffForHumans() : '' }}</span>
           </div>
         </div>
+        @if($p->file_url)
         <div class="media">
           @if($p->media_type=='video')
             <video src="{{ $p->file_url }}" controls preload="metadata" @if($p->thumb_url) poster="{{ $p->thumb_url }}" @endif></video>
@@ -57,6 +58,7 @@
             <a href="{{ route('public.post',$p->id) }}"><img src="{{ $p->file_url }}" alt="{{ $p->title ?: 'Student post' }}" loading="lazy"></a>
           @endif
         </div>
+        @endif
         <div class="body">
           @if($p->title)<div class="cap">{{ stripslashes($p->title) }}</div>@endif
           @if($p->description && trim(strip_tags(stripslashes($p->description))) != '')<div style="color:var(--muted);font-size:14px;margin-top:4px">{{ trim(strip_tags(stripslashes($p->description))) }}</div>@endif
