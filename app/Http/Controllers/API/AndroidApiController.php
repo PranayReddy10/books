@@ -2921,6 +2921,130 @@ class AndroidApiController extends MainAPIController
     }
 
     /**
+     * result_fetch — pull the caller's mark sheet from jntuhconnect by hall
+     * ticket number, so a student does not have to type six semesters by hand.
+     *
+     * The upstream scrapes the university site on a cache miss and answers
+     * "queued" straight away, so this can legitimately need a few polls. The
+     * app shows a spinner on 'queued' and offers manual entry on 'error'.
+     *
+     * Only the roll number on the caller's own profile may be fetched — a hall
+     * ticket is enough to read anybody's results, so it is not a free parameter.
+     */
+    public function result_fetch()
+    {
+        $get_data = checkSignSalt($_POST['data']);
+        $user_id  = isset($get_data['user_id']) ? $get_data['user_id'] : '';
+
+        $user = User::where('id', $user_id)->first();
+        if (!$user) {
+            $response[] = array('msg' => 'Something went wrong', 'success' => '0');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        $hall = strtoupper(trim(isset($user->rollnumber) ? $user->rollnumber : ''));
+        if ($hall === '') {
+            // First-time fetch: accept the number the student just typed and,
+            // once it resolves, keep it on the profile.
+            $hall = strtoupper(trim(isset($get_data['hall_ticket_no']) ? $get_data['hall_ticket_no'] : ''));
+        }
+        if (!\App\Services\JntuhConnect::validRoll($hall)) {
+            $response[] = array('state' => 'error', 'msg' => 'Enter a valid 10-character hall ticket number', 'success' => '0');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        // Someone else already owns this hall ticket.
+        $existing = Result::where('hall_ticket_no', $hall)->first();
+        if ($existing && $existing->user_id && (int) $existing->user_id !== (int) $user_id) {
+            $response[] = array('state' => 'error', 'msg' => 'This hall ticket is already registered by another account', 'success' => '0');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        // Cheap abuse guard: the upstream scrape is expensive for them, not us.
+        $limit = (int) config('jntuh.rate_limit_per_hour');
+        if ($limit > 0) {
+            $bucket = 'jntuh:rl:' . $user_id . ':' . date('YmdH');
+            $hits = (int) \Cache::get($bucket, 0);
+            if ($hits >= $limit) {
+                $response[] = array('state' => 'error', 'msg' => 'Too many attempts. Please try again later.', 'success' => '0');
+                return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+            }
+            \Cache::put($bucket, $hits + 1, now()->addHour());
+        }
+
+        $out = (new \App\Services\JntuhConnect())->academicResult($hall);
+
+        if ($out['state'] === 'queued') {
+            $response[] = array(
+                'state' => 'queued',
+                'msg'   => 'Fetching your results from the university. This can take a minute — please try again shortly.',
+                'success' => '1',
+            );
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        if ($out['state'] !== 'ready') {
+            $response[] = array(
+                'state' => 'error',
+                'msg'   => $out['msg'] ?: 'Could not fetch your results. You can enter them manually.',
+                'can_enter_manually' => 1,
+                'success' => '0',
+            );
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        $importer = new \App\Services\JntuhResultImporter();
+        $normalized = $importer->normalize($out['data']);
+
+        if (empty($normalized['semesters'])) {
+            $response[] = array(
+                'state' => 'error',
+                'msg'   => 'No results published for this hall ticket yet. You can enter them manually.',
+                'can_enter_manually' => 1,
+                'success' => '0',
+            );
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        try {
+            $result = $importer->store(
+                $normalized,
+                $hall,
+                $user_id,
+                isset($user->university_id) ? $user->university_id : null
+            );
+        } catch (\Exception $e) {
+            \Log::error('result_fetch import failed: ' . $e->getMessage());
+            $response[] = array(
+                'state' => 'error',
+                'msg'   => 'Could not save the fetched results. You can enter them manually.',
+                'can_enter_manually' => 1,
+                'success' => '0',
+            );
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        // Remember the hall ticket so later fetches need no input.
+        if (trim((string) $user->rollnumber) === '') {
+            $user->rollnumber = $hall;
+            $user->save();
+        }
+
+        $response[] = array(
+            'state'          => 'ready',
+            'result_id'      => $result->id,
+            'student_name'   => (string) $result->student_name,
+            'current_cgpa'   => $result->current_cgpa,
+            'total_credits'  => $result->total_credits,
+            'backlogs_count' => (int) $result->backlogs_count,
+            'semester_count' => count($normalized['semesters']),
+            'msg'            => 'Results fetched successfully',
+            'success'        => '1',
+        );
+        return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+    }
+
+    /**
      * result_save — create/replace the caller's own result (owner-only).
      * Rejects writes when locked (admin-verified). See SQL patch for schema.
      * Payload includes semesters_json (see ANDROID guide for exact shape).

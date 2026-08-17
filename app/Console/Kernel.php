@@ -16,6 +16,7 @@ class Kernel extends ConsoleKernel
         //
         Commands\TaskCron::class,
         Commands\BackfillUsernames::class,
+        Commands\JntuhProbe::class,
     ];
 
     /**

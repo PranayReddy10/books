@@ -26,6 +26,21 @@
         <div class="col-12">
           <div class="card-box table-responsive">
 
+            {{-- Auto-import from the university feed (jntuhconnect). The first
+                 fetch for an unseen roll number usually answers "queued" while
+                 the upstream scrapes; press it again after a few seconds. --}}
+            @if(config('jntuh.enabled'))
+            <div class="row m-b-20">
+              <div class="col-md-12">
+                {!! Form::open(array('url' => 'admin/results/jntuh-fetch','class'=>'form-inline','role'=>'form','method'=>'post')) !!}
+                  <input type="text" name="hall_ticket_no" maxlength="10" placeholder="Hall ticket number" class="form-control m-r-5" required>
+                  <button type="submit" class="btn btn-primary"><i class="fa fa-cloud-download"></i> Fetch from JNTUH</button>
+                  <span class="text-muted m-l-10">Pulls all semesters automatically. Marks the result verified; you can still edit it.</span>
+                {!! Form::close() !!}
+              </div>
+            </div>
+            @endif
+
             {{-- Filters --}}
             <div class="row m-b-20">
               <div class="col-md-12">

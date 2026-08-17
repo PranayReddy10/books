@@ -121,6 +121,74 @@ class ResultsController extends MainAdminController
         return view('admin.pages.results.add', compact('page_title', 'universities', 'users', 'userDetails'));
     }
 
+    /**
+     * Pull a mark sheet straight from jntuhconnect by hall ticket number, so an
+     * admin does not have to key in six semesters. Everything the upstream sends
+     * lands as verified-but-unlocked rows, which keeps them editable here.
+     *
+     * Posted from the results list; also used by jntuhRefetch below.
+     */
+    public function jntuhFetch(Request $request)
+    {
+        $hall = strtoupper(trim($request->input('hall_ticket_no', '')));
+        return $this->importFromJntuh($hall, 'admin/results');
+    }
+
+    /** Refresh an existing result from the university feed. */
+    public function jntuhRefetch($id)
+    {
+        $result = Result::findOrFail($id);
+        return $this->importFromJntuh($result->hall_ticket_no, 'admin/results/view/' . $id);
+    }
+
+    protected function importFromJntuh($hall, $fallbackRedirect)
+    {
+        $hall = strtoupper(trim((string) $hall));
+        if (!\App\Services\JntuhConnect::validRoll($hall)) {
+            \Session::flash('flash_message', 'Enter a valid 10-character hall ticket number');
+            return redirect($fallbackRedirect);
+        }
+
+        $out = (new \App\Services\JntuhConnect())->academicResult($hall);
+
+        if ($out['state'] === 'queued') {
+            // The upstream queues a scrape on a cache miss; nothing to save yet.
+            \Session::flash('flash_message', 'Fetching ' . $hall . ' from the university. Try again in a minute.');
+            return redirect($fallbackRedirect);
+        }
+        if ($out['state'] !== 'ready') {
+            \Session::flash('flash_message', 'Could not fetch ' . $hall . ': ' . $out['msg']);
+            return redirect($fallbackRedirect);
+        }
+
+        $importer = new \App\Services\JntuhResultImporter();
+        $normalized = $importer->normalize($out['data']);
+        if (empty($normalized['semesters'])) {
+            \Session::flash('flash_message', 'No published semesters found for ' . $hall);
+            return redirect($fallbackRedirect);
+        }
+
+        // Attach the account that already carries this roll number, if any.
+        $user = User::where('rollnumber', $hall)->first();
+
+        try {
+            $result = $importer->store(
+                $normalized,
+                $hall,
+                $user ? $user->id : null,
+                ($user && isset($user->university_id)) ? $user->university_id : null
+            );
+        } catch (\Exception $e) {
+            \Log::error('admin jntuh import failed: ' . $e->getMessage());
+            \Session::flash('flash_message', 'Could not save the fetched result');
+            return redirect($fallbackRedirect);
+        }
+
+        generate_result_report_card($result);
+        \Session::flash('flash_message', 'Imported ' . count($normalized['semesters']) . ' semester(s) for ' . $hall);
+        return redirect('admin/results/view/' . $result->id);
+    }
+
     /** Persist a new result + its tree. */
     public function store(Request $request)
     {
