@@ -2236,6 +2236,18 @@ class AndroidApiController extends MainAPIController
         $videoExts = array('mp4', 'mov', 'webm', 'm4v');
 
         $media_file = $request->file('media_file');
+
+        // App builds that predate the extra_files[] rename send their extra photos
+        // as media_file[], which makes PHP hand back an array here instead of one
+        // upload. Take the first as the cover and keep the rest as extras, so those
+        // builds keep working instead of fataling on the next method call.
+        $legacy_extras = array();
+        if (is_array($media_file)) {
+            $media_file = array_values($media_file);
+            $legacy_extras = array_slice($media_file, 1);
+            $media_file = count($media_file) ? $media_file[0] : null;
+        }
+
         if (!$media_file && $media_type != 'text') {
             $response[] = array('msg' => 'No file uploaded', 'success' => '0');
             return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
@@ -2284,6 +2296,11 @@ class AndroidApiController extends MainAPIController
             if ($extras && !is_array($extras)) {
                 $extras = array($extras);
             }
+            if (!is_array($extras)) {
+                $extras = array();
+            }
+            // Anything an older build sent as media_file[] belongs here too.
+            $extras = array_merge($extras, $legacy_extras);
             if (is_array($extras)) {
                 foreach ($extras as $index => $extra) {
                     if (count($extra_images) >= 5) {
