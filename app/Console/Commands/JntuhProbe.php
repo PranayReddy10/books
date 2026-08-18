@@ -34,16 +34,11 @@ class JntuhProbe extends Command
         $this->line('Base URL: ' . $base);
         $this->newLine();
 
-        // Candidate REST shapes, most likely first.
-        $candidates = [
-            config('jntuh.paths.academic_result'),
-            '/api/academicresult/{roll}',
-            '/api/academic-result/{roll}',
-            '/api/result/{roll}',
-            '/api/v1/academicresult/{roll}',
-            '/academicresult/{roll}',
-            '/api/academicresult?rollNumber={roll}',
-        ];
+        // Same candidate list the client uses in 'auto' mode.
+        $candidates = array_merge(
+            [config('jntuh.paths.academic_result')],
+            (array) config('jntuh.fallback_paths.academic_result', [])
+        );
 
         $winner = null;
         foreach (array_unique(array_filter($candidates)) as $path) {
@@ -53,7 +48,10 @@ class JntuhProbe extends Command
                 $status = $res->status();
                 $json = $res->json();
                 $ok = $res->successful() && is_array($json);
-                $this->line(sprintf('%-45s %s %s', $path, $status, $ok ? 'JSON ok' : 'no JSON'));
+                // Show a slice of whatever came back — an HTML error page or a
+                // "queued" body both tell you something the status code does not.
+                $peek = $ok ? 'JSON ok' : 'no JSON: ' . str_replace("\n", ' ', substr(trim($res->body()), 0, 90));
+                $this->line(sprintf('%-45s %s %s', $path, $status, $peek));
                 if ($ok && $winner === null) {
                     $winner = ['path' => $path, 'json' => $json];
                 }

@@ -16,10 +16,24 @@ return [
     // Master switch. Off => the app falls back to manual entry only.
     'enabled' => env('JNTUH_ENABLED', true),
 
-    // 'rest' (preferred) or 'mcp'.
-    'mode' => env('JNTUH_MODE', 'rest'),
+    // 'auto' tries the REST candidates below and falls back to MCP, remembering
+    // whichever answered. Pin it to 'rest' or 'mcp' once you know.
+    'mode' => env('JNTUH_MODE', 'auto'),
 
     'base_url' => rtrim(env('JNTUH_BASE_URL', 'https://jntuhconnect.dhethi.com'), '/'),
+
+    // Extra REST paths tried in 'auto' mode when the configured one does not
+    // answer. {roll} is substituted. A working path is cached for a day.
+    'fallback_paths' => [
+        'academic_result' => [
+            '/api/academicresult/{roll}',
+            '/api/academic-result/{roll}',
+            '/api/result/{roll}',
+            '/api/v1/academicresult/{roll}',
+            '/academicresult/{roll}',
+            '/api/academicresult?rollNumber={roll}',
+        ],
+    ],
 
     // REST paths. {roll} is substituted. Adjust after probing — these are the
     // conventional names for this API and may differ on your deployment.

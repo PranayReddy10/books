@@ -80,9 +80,14 @@ class JntuhConnect
         }
 
         try {
-            $out = config('jntuh.mode') === 'mcp'
-                ? $this->callMcp($key, $roll)
-                : $this->callRest($key, $roll);
+            $mode = config('jntuh.mode');
+            if ($mode === 'mcp') {
+                $out = $this->callMcp($key, $roll);
+            } elseif ($mode === 'rest') {
+                $out = $this->callRest($key, $roll, config('jntuh.paths.' . $key));
+            } else {
+                $out = $this->callAuto($key, $roll);
+            }
         } catch (\Exception $e) {
             Log::error('jntuh ' . $key . ' failed: ' . $e->getMessage());
             return $this->err('Could not reach the results service. Try again in a minute.');
@@ -96,9 +101,60 @@ class JntuhConnect
         return $out;
     }
 
-    protected function callRest($key, $roll)
+    /**
+     * The upstream's REST paths are not published anywhere we can read, so try
+     * the configured one, then the known variants, then MCP. Whatever answers is
+     * remembered for a day, which keeps this to one request in the normal case.
+     */
+    protected function callAuto($key, $roll)
     {
-        $path = (string) config('jntuh.paths.' . $key);
+        $remembered = Cache::get('jntuh:endpoint:' . $key);
+        if ($remembered === 'mcp') {
+            return $this->callMcp($key, $roll);
+        }
+        if (is_string($remembered) && $remembered !== '') {
+            $out = $this->callRest($key, $roll, $remembered);
+            if ($out['state'] !== 'error') {
+                return $out;
+            }
+            Cache::forget('jntuh:endpoint:' . $key);
+        }
+
+        $tried = [];
+        foreach ($this->candidatePaths($key) as $path) {
+            $out = $this->callRest($key, $roll, $path);
+            if ($out['state'] !== 'error') {
+                Cache::put('jntuh:endpoint:' . $key, $path, now()->addDay());
+                return $out;
+            }
+            $tried[] = $path . ' (' . $out['msg'] . ')';
+        }
+
+        $out = $this->callMcp($key, $roll);
+        if ($out['state'] !== 'error') {
+            Cache::put('jntuh:endpoint:' . $key, 'mcp', now()->addDay());
+            return $out;
+        }
+
+        Log::warning('jntuh auto-discovery failed for ' . $key . ': ' . implode(' | ', $tried)
+            . ' | mcp (' . $out['msg'] . ')');
+
+        return $this->err('Could not reach the results service. Tried '
+            . count($tried) . ' REST paths and MCP; run "php artisan jntuh:probe" for detail.');
+    }
+
+    protected function candidatePaths($key)
+    {
+        $paths = [(string) config('jntuh.paths.' . $key)];
+        foreach ((array) config('jntuh.fallback_paths.' . $key, []) as $extra) {
+            $paths[] = (string) $extra;
+        }
+        return array_values(array_unique(array_filter($paths)));
+    }
+
+    protected function callRest($key, $roll, $path)
+    {
+        $path = (string) $path;
         if ($path === '') {
             return $this->err('No endpoint configured for ' . $key);
         }
