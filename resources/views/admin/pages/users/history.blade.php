@@ -16,8 +16,8 @@
 
                                     <div class="profile-info-name">
                                         
-                                        @if($user->user_image)
-                                          <img src="{{ URL::asset('upload/'.$user->user_image) }}" class="img-thumbnail" alt="profile_img" style="width: 155px">
+                                        @if(has_user_image($user->user_image))
+                                          <img src="{{ user_image_url($user->user_image) }}" class="img-thumbnail" alt="profile_img" style="width: 155px">
                                         @else  
                                           <img src="{{ URL::asset('upload/profile.jpg') }}" class="img-thumbnail" alt="profile_img" style="width: 155px">
                                         @endif

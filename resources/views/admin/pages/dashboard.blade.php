@@ -208,7 +208,7 @@
                   <div class="list-row" style="align-items:flex-start;">
                     <span style="display:flex;gap:10px;align-items:center;">
                       @if(isset(\App\User::getUserInfo($review_data->user_id)->user_image))
-                        <img src="{{ URL::to('upload/'.\App\User::getUserInfo($review_data->user_id,'user_image')) }}" class="avatar-sm">
+                        <img src="{{ user_image_url(\App\User::getUserInfo($review_data->user_id,'user_image')) }}" class="avatar-sm">
                       @else
                         <img src="{{ URL::asset('admin_assets/images/users/avatar-10.jpg') }}" class="avatar-sm">
                       @endif
@@ -243,7 +243,7 @@
                         <td>
                           <div style="display:flex;gap:10px;align-items:center;">
                             @if(isset(\App\User::getUserInfo($reports_data->user_id)->user_image))
-                              <img src="{{ URL::to('upload/'.\App\User::getUserInfo($reports_data->user_id)->user_image) }}" class="avatar-sm">
+                              <img src="{{ user_image_url(\App\User::getUserInfo($reports_data->user_id)->user_image) }}" class="avatar-sm">
                             @else
                               <img src="{{ URL::to('upload/profile.jpg') }}" class="avatar-sm">
                             @endif

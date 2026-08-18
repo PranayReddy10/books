@@ -1125,6 +1125,27 @@ if (!function_exists('user_image_url')) {
     }
 }
 
+if (!function_exists('has_user_image')) {
+    /**
+     * Whether a stored profile image is actually displayable.
+     *
+     * The views used to ask file_exists('upload/'.$image), which is false for a
+     * remote URL — so Google and Spaces avatars fell through to the placeholder,
+     * or worse rendered as /upload/https://... Remote URLs count as present;
+     * legacy bare filenames still have to exist on disk.
+     */
+    function has_user_image($image)
+    {
+        if (empty($image)) {
+            return false;
+        }
+        if (\Illuminate\Support\Str::startsWith($image, ['http://', 'https://'])) {
+            return true;
+        }
+        return file_exists(public_path('upload/' . $image));
+    }
+}
+
 if (!function_exists('generate_book_cover_image')) {
     /**
      * Build a book cover as an Intervention Image object: solid category color

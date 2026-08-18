@@ -14,9 +14,9 @@
                   
                   <div class="form-group row pl-2 mb-4">
                          
-                        @if(file_exists(public_path('upload/'.Auth::user()->user_image)))                                 
+                        @if(has_user_image(Auth::user()->user_image))                                 
  
-                        <img src="{{URL::to('upload/'.Auth::user()->user_image)}}" alt="person" class="img-thumbnail" width="150" />
+                        <img src="{{ user_image_url(Auth::user()->user_image) }}" alt="person" class="img-thumbnail" width="150" />
                         
                         @else
                             
