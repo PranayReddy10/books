@@ -3445,7 +3445,10 @@ class AndroidApiController extends MainAPIController
             $user_obj->college = $get_data['college'];
         }
         // Academic fields the Results form pulls from (roll = hall ticket).
-        if (isset($get_data['rollnumber'])) {
+        // The hall ticket is set once and then fixed: results are keyed on it,
+        // so letting it change would orphan this student's marks or point them
+        // at somebody else's. Only fill it when the account has none yet.
+        if (isset($get_data['rollnumber']) && trim((string) $user_obj->rollnumber) === '') {
             $user_obj->rollnumber = $get_data['rollnumber'];
         }
         if (isset($get_data['branch'])) {
