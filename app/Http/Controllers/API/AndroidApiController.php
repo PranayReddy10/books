@@ -2605,7 +2605,10 @@ class AndroidApiController extends MainAPIController
                  $finduser->save();
                  }
                  $finduser->touchLogin('app');
-                 $profile_complete = ($finduser->university && $finduser->department_id && $finduser->college) ? '1' : '0';
+                 // The hall ticket counts too: without it results cannot be fetched, and
+                 // Complete Profile asks for it, so a profile lacking one is not done.
+                 $profile_complete = ($finduser->university && $finduser->department_id
+                     && $finduser->college && trim((string) $finduser->rollnumber) !== '') ? '1' : '0';
                  $response[] = array('user_id' => $finduser->id,'name' => $finduser->name,'username' => $finduser->username ?: '','email' => $finduser->email,'phone' => $phone,'user_image' => $user_image,'profile_complete' => $profile_complete,'msg' => trans('words.login_success'),'success'=>'1');
 
                 }
@@ -2677,7 +2680,8 @@ class AndroidApiController extends MainAPIController
             }
             $user->touchLogin('app');
             // Brand-new social user: never has university/dept/college yet.
-            $profile_complete = ($user->university && $user->department_id && $user->college) ? '1' : '0';
+            $profile_complete = ($user->university && $user->department_id
+                && $user->college && trim((string) $user->rollnumber) !== '') ? '1' : '0';
             $response[] = array('user_id' => $user_id,'name' => $user->name,'username' => $user->username ?: '','email' => $user->email,'phone' => $phone,'user_image' => $user_image,'profile_complete' => $profile_complete,'msg' => trans('words.login_success'),'success'=>'1');
 
 
