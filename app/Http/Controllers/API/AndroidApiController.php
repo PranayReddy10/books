@@ -2972,6 +2972,9 @@ class AndroidApiController extends MainAPIController
             'total_credits'    => $result->total_credits,
             'backlogs_count'   => (int) $result->backlogs_count,
             'verified'         => (int) $result->verified,
+            // 'jntuh' => came from the university feed, so the app shows it
+            // read-only; 'manual' => the student typed it and may edit it.
+            'source'           => (string) $result->source,
             'locked'           => $allLocked,   // 1 only when every semester is locked
             'share_url'        => $result->share_token
                                     ? rtrim(env('APP_URL'), '/') . '/report/' . $result->share_token
@@ -3488,7 +3491,10 @@ class AndroidApiController extends MainAPIController
             $user_obj->college = $get_data['college'];
         }
         // Academic fields the Results form pulls from (roll = hall ticket).
-        if (isset($get_data['rollnumber'])) {
+        // The hall ticket is set once and then fixed: results are keyed on it,
+        // so letting it change would orphan this student's marks or point them
+        // at somebody else's. Only fill it when the account has none yet.
+        if (isset($get_data['rollnumber']) && trim((string) $user_obj->rollnumber) === '') {
             $user_obj->rollnumber = $get_data['rollnumber'];
         }
         if (isset($get_data['branch'])) {

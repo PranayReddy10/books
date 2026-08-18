@@ -70,8 +70,8 @@
           <div class="user-menu">
             <div class="user-name">
               <span>
-                @if(Auth::User()->user_image AND file_exists(public_path('upload/'.Auth::User()->user_image)))
-                  <img src="{{ URL::asset('upload/'.Auth::User()->user_image) }}" alt="profile_img" title="{{Auth::User()->name,6}}" id="userPic">
+                @if(has_user_image(Auth::User()->user_image))
+                  <img src="{{ user_image_url(Auth::User()->user_image) }}" alt="profile_img" title="{{Auth::User()->name,6}}" id="userPic">
                 @else  
                     <img src="{{ URL::asset('site_assets/images/user-avatar.png') }}" alt="profile_img" title="{{Auth::User()->name,6}}" id="userPic">
                 @endif

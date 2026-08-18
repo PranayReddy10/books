@@ -30,7 +30,7 @@
 
                   @if(Auth::user()->user_image!='')                                 
  
-                  <img src="{{URL::to('upload/'.Auth::user()->user_image)}}" alt="person" class="rounded-circle" />
+                  <img src="{{ user_image_url(Auth::user()->user_image) }}" alt="person" class="rounded-circle" />
                    
                   @else
                       

@@ -51,12 +51,12 @@
                     </div>
                   </div>
 
-                  @if(isset($user->user_image) AND file_exists(public_path('upload/'.$user->user_image))) 
+                  @if(has_user_image($user->user_image)) 
                   <div class="form-group row">
                     <label class="col-sm-3 col-form-label">&nbsp;</label>
                     <div class="col-sm-8">
                                                                          
-                           <img src="{{URL::to('upload/'.$user->user_image)}}" alt="video image" class="img-thumbnail" width="140">                        
+                           <img src="{{ user_image_url($user->user_image) }}" alt="video image" class="img-thumbnail" width="140">                        
                        
                     </div>
                   </div>
