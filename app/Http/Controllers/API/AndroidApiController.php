@@ -3453,6 +3453,11 @@ class AndroidApiController extends MainAPIController
         if (isset($get_data['degree'])) {
             $user_obj->degree = $get_data['degree'];
         }
+        // Newer column; skip it rather than failing the save on a deploy that
+        // is running ahead of its migration.
+        if (isset($get_data['father_name']) && Schema::hasColumn('users', 'father_name')) {
+            $user_obj->father_name = $get_data['father_name'];
+        }
 
         if($get_data['password'])
         {
