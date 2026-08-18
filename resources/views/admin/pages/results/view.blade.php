@@ -143,6 +143,10 @@
             @else
               <a href="{{ url('admin/results/unverify/'.$result->id) }}" class="btn btn-warning btn-block m-b-10"><i class="fa fa-undo"></i> Un-verify &amp; Unlock</a>
             @endif
+            @if(config('jntuh.enabled'))
+              {{-- Re-pulls every unlocked semester; locked ones are left alone. --}}
+              <a href="{{ url('admin/results/jntuh-refetch/'.$result->id) }}" class="btn btn-primary btn-block m-b-10" onclick="return confirm('Re-fetch this hall ticket from JNTUH? Unlocked semesters will be replaced.');"><i class="fa fa-cloud-download"></i> Re-fetch from JNTUH</a>
+            @endif
             <a href="{{ url('admin/results/regenerate/'.$result->id) }}" class="btn btn-info btn-block m-b-10"><i class="fa fa-refresh"></i> Regenerate Card</a>
             <a href="{{ url('admin/results/delete/'.$result->id) }}" class="btn btn-danger btn-block m-b-10 data_remove"><i class="fa fa-trash"></i> Delete</a>
           </div>
