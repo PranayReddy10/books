@@ -2926,6 +2926,9 @@ class AndroidApiController extends MainAPIController
             'total_credits'    => $result->total_credits,
             'backlogs_count'   => (int) $result->backlogs_count,
             'verified'         => (int) $result->verified,
+            // 'jntuh' => came from the university feed, so the app shows it
+            // read-only; 'manual' => the student typed it and may edit it.
+            'source'           => (string) $result->source,
             'locked'           => $allLocked,   // 1 only when every semester is locked
             'share_url'        => $result->share_token
                                     ? rtrim(env('APP_URL'), '/') . '/report/' . $result->share_token
