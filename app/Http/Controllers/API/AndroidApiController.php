@@ -1931,6 +1931,10 @@ class AndroidApiController extends MainAPIController
         $college= isset($get_data['college']) ? $get_data['college'] : '';
         $rollnumber= isset($get_data['rollnumber']) ? $get_data['rollnumber'] : '';
         $gender= isset($get_data['gender']) ? $get_data['gender'] : '';
+        // Filled from the hall-ticket lookup during sign-up, or typed by hand.
+        $branch= isset($get_data['branch']) ? $get_data['branch'] : '';
+        $regulation= isset($get_data['regulation']) ? $get_data['regulation'] : '';
+        $father_name= isset($get_data['father_name']) ? $get_data['father_name'] : '';
         
         $check_email = User::where('email', $email)->first();
 
@@ -1960,6 +1964,13 @@ class AndroidApiController extends MainAPIController
             $user->college= $college?$college:'';
             $user->rollnumber= $rollnumber?$rollnumber:'';
             $user->gender= $gender?$gender:'';
+            $user->branch= $branch?$branch:'';
+            $user->regulation= $regulation?$regulation:'';
+            // father_name is newer than some deployments; skip it rather than
+            // failing the whole sign-up when the column is not there yet.
+            if ($father_name && Schema::hasColumn('users', 'father_name')) {
+                $user->father_name = $father_name;
+            }
             $user->save();
 
             $response[] = array('msg' => trans('words.account_created_successfully'),'success'=>'1');
