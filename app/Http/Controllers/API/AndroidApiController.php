@@ -2847,7 +2847,14 @@ class AndroidApiController extends MainAPIController
         }
 
         if (!$result) {
-            $response[] = array('has_result' => 0, 'msg' => 'No result found', 'success' => '1');
+            // Hand back the profile's hall ticket anyway, so the app can offer a
+            // one-tap auto-fetch instead of asking the student to retype it.
+            $response[] = array(
+                'has_result'     => 0,
+                'hall_ticket_no' => (string) (isset($user->rollnumber) ? $user->rollnumber : ''),
+                'msg'            => 'No result found',
+                'success'        => '1',
+            );
             return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
         }
 
@@ -2918,6 +2925,97 @@ class AndroidApiController extends MainAPIController
         );
 
         return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+    }
+
+    /**
+     * hall_ticket_lookup — identity behind a hall ticket, for the registration
+     * flow, which runs before any account exists and so cannot be user-scoped.
+     *
+     * Returns only what the sign-up form fills in (name, father, college,
+     * branch, regulation) plus how many semesters are published. No marks, and
+     * nothing is written to the results tables — result_fetch does that once the
+     * student owns the account.
+     */
+    public function hall_ticket_lookup()
+    {
+        $get_data = checkSignSalt($_POST['data']);
+        $hall = strtoupper(trim(isset($get_data['hall_ticket_no']) ? $get_data['hall_ticket_no'] : ''));
+
+        if (!\App\Services\JntuhConnect::validRoll($hall)) {
+            $response[] = array('state' => 'error', 'msg' => 'Enter a valid 10-character hall ticket number', 'success' => '0');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        // Already taken? Say so now rather than after the student fills the rest in.
+        $taken = Result::where('hall_ticket_no', $hall)->whereNotNull('user_id')->exists()
+            || User::where('rollnumber', $hall)->exists();
+        if ($taken) {
+            $response[] = array(
+                'state' => 'error',
+                'msg'   => 'This hall ticket is already registered. Please log in instead.',
+                'already_registered' => 1,
+                'success' => '0',
+            );
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        // Unauthenticated, so throttle per IP.
+        $bucket = 'jntuh:lookup:' . md5((string) \Request::ip()) . ':' . date('YmdH');
+        $hits = (int) \Cache::get($bucket, 0);
+        if ($hits >= 20) {
+            $response[] = array('state' => 'error', 'msg' => 'Too many attempts. Please try again later.', 'success' => '0');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+        \Cache::put($bucket, $hits + 1, now()->addHour());
+
+        $out = (new \App\Services\JntuhConnect())->academicResult($hall);
+
+        if ($out['state'] === 'queued') {
+            $response[] = array(
+                'state' => 'queued',
+                'msg'   => 'Looking up your details. This can take a minute — please try again shortly.',
+                'success' => '1',
+            );
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+        if ($out['state'] !== 'ready') {
+            $response[] = array(
+                'state' => 'error',
+                'msg'   => $out['msg'] ?: 'Could not find these details. You can type them in instead.',
+                'can_enter_manually' => 1,
+                'success' => '0',
+            );
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        $normalized = (new \App\Services\JntuhResultImporter())->normalize($out['data']);
+
+        $response[] = array(
+            'state'          => 'ready',
+            'hall_ticket_no' => $hall,
+            'student_name'   => (string) $normalized['student_name'],
+            'father_name'    => (string) $normalized['father_name'],
+            'college_code'   => (string) $normalized['college_code'],
+            'branch'         => (string) $normalized['branch'],
+            'regulation'     => (string) ($normalized['regulation'] ?: $this->regulationForHallTicket($hall)),
+            'semester_count' => count($normalized['semesters']),
+            'msg'            => 'Details found',
+            'success'        => '1',
+        );
+        return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+    }
+
+    /**
+     * JNTUH regulations follow the admission year encoded in the hall ticket:
+     * 22xxx -> R22, 18..21 -> R18, 16/17 -> R16, older -> R13.
+     */
+    protected function regulationForHallTicket($hall)
+    {
+        $year = (int) substr($hall, 0, 2);
+        if ($year >= 22) { return 'R22'; }
+        if ($year >= 18) { return 'R18'; }
+        if ($year >= 16) { return 'R16'; }
+        return 'R13';
     }
 
     /**
