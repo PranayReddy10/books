@@ -20,40 +20,39 @@ return [
     // whichever answered. Pin it to 'rest' or 'mcp' once you know.
     'mode' => env('JNTUH_MODE', 'auto'),
 
-    'base_url' => rtrim(env('JNTUH_BASE_URL', 'https://jntuhconnect.dhethi.com'), '/'),
+    // jntuhconnect.dhethi.com is the website; the API it talks to lives here.
+    'base_url' => rtrim(env('JNTUH_BASE_URL', 'https://jntuhresults.dhethi.com'), '/'),
 
     // Extra REST paths tried in 'auto' mode when the configured one does not
     // answer. {roll} is substituted. A working path is cached for a day.
     'fallback_paths' => [
         'academic_result' => [
-            '/api/academicresult/{roll}',
-            '/api/academic-result/{roll}',
-            '/api/result/{roll}',
-            '/api/v1/academicresult/{roll}',
-            '/academicresult/{roll}',
-            '/api/academicresult?rollNumber={roll}',
+            '/api/getAcademicResult?roll_no={roll}',
+            '/api/getAllResult?roll_no={roll}',
         ],
     ],
 
-    // REST paths. {roll} is substituted. Adjust after probing — these are the
-    // conventional names for this API and may differ on your deployment.
+    // Routes as defined by the upstream (ThilakReddyy/jntuh-backend, api/routes.py).
+    // All are GET, and the roll number is the roll_no query parameter.
     'paths' => [
-        'academic_result' => env('JNTUH_PATH_ACADEMIC', '/api/academicresult/{roll}'),
-        'all_result'      => env('JNTUH_PATH_ALL', '/api/allresult/{roll}'),
-        'backlogs'        => env('JNTUH_PATH_BACKLOGS', '/api/backlogs/{roll}'),
-        'credits'         => env('JNTUH_PATH_CREDITS', '/api/creditschecker/{roll}'),
-        'notifications'   => env('JNTUH_PATH_NOTIFICATIONS', '/api/latestnotifications'),
+        'academic_result' => env('JNTUH_PATH_ACADEMIC', '/api/getAcademicResult?roll_no={roll}'),
+        'all_result'      => env('JNTUH_PATH_ALL', '/api/getAllResult?roll_no={roll}'),
+        'backlogs'        => env('JNTUH_PATH_BACKLOGS', '/api/getBacklogs?roll_no={roll}'),
+        'credits'         => env('JNTUH_PATH_CREDITS', '/api/getCreditsChecker?roll_no={roll}'),
+        'notifications'   => env('JNTUH_PATH_NOTIFICATIONS', '/api/getlatestnotifications'),
+        // Forces a fresh scrape instead of serving the cached copy.
+        'hard_refresh'    => env('JNTUH_PATH_REFRESH', '/api/hardRefresh?roll_no={roll}'),
     ],
 
-    // MCP transport (JSON-RPC 2.0 over HTTP).
+    // MCP transport (JSON-RPC 2.0 over HTTP). Same service, agent-facing door.
     'mcp' => [
-        'url'   => env('JNTUH_MCP_URL', 'https://jntuhconnect.dhethi.com/mcp'),
+        'url'   => env('JNTUH_MCP_URL', 'https://jntuhresults.dhethi.com/mcp'),
         'tools' => [
-            'academic_result' => env('JNTUH_TOOL_ACADEMIC', 'getAcademicResult'),
-            'all_result'      => env('JNTUH_TOOL_ALL', 'getAllResult'),
-            'backlogs'        => env('JNTUH_TOOL_BACKLOGS', 'getBacklogs'),
-            'credits'         => env('JNTUH_TOOL_CREDITS', 'getCreditsChecker'),
-            'notifications'   => env('JNTUH_TOOL_NOTIFICATIONS', 'getlatestnotifications'),
+            'academic_result' => env('JNTUH_TOOL_ACADEMIC', 'get_academic_result'),
+            'all_result'      => env('JNTUH_TOOL_ALL', 'get_all_result'),
+            'backlogs'        => env('JNTUH_TOOL_BACKLOGS', 'get_backlogs'),
+            'credits'         => env('JNTUH_TOOL_CREDITS', 'get_credits_checker'),
+            'notifications'   => env('JNTUH_TOOL_NOTIFICATIONS', 'get_latest_notifications'),
         ],
     ],
 

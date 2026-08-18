@@ -52,6 +52,20 @@ class JntuhConnect
     }
 
     /**
+     * Ask the upstream to re-scrape rather than serve its cached copy, and drop
+     * our own cached answer so the next fetch actually goes out. Without this a
+     * "re-fetch" would just re-read what we already had.
+     */
+    public function hardRefresh($rollNumber)
+    {
+        $roll = strtoupper(trim((string) $rollNumber));
+        foreach (['academic_result', 'all_result', 'backlogs', 'credits'] as $key) {
+            Cache::forget('jntuh:' . $key . ':' . $roll);
+        }
+        return $this->fetch('hard_refresh', $roll);
+    }
+
+    /**
      * A roll number is exactly 10 characters upstream; reject anything else
      * before spending a request on it.
      */
@@ -73,10 +87,14 @@ class JntuhConnect
             return $this->err('Enter a valid 10-character hall ticket number');
         }
 
+        // A forced refresh must never be served from, or written to, our cache.
+        $cacheable = ($key !== 'hard_refresh');
         $cacheKey = 'jntuh:' . $key . ':' . ($roll ?: 'all');
-        $cached = Cache::get($cacheKey);
-        if (is_array($cached)) {
-            return $cached;
+        if ($cacheable) {
+            $cached = Cache::get($cacheKey);
+            if (is_array($cached)) {
+                return $cached;
+            }
         }
 
         try {
@@ -94,7 +112,7 @@ class JntuhConnect
         }
 
         // Only a finished answer is worth caching — a queued one must be re-asked.
-        if ($out['state'] === 'ready') {
+        if ($cacheable && $out['state'] === 'ready') {
             Cache::put($cacheKey, $out, now()->addMinutes((int) config('jntuh.cache_minutes')));
         }
 

@@ -138,6 +138,9 @@ class ResultsController extends MainAdminController
     public function jntuhRefetch($id)
     {
         $result = Result::findOrFail($id);
+        // Force a re-scrape upstream and drop our cached copy, otherwise this
+        // would just re-import the same answer we already had.
+        (new \App\Services\JntuhConnect())->hardRefresh($result->hall_ticket_no);
         return $this->importFromJntuh($result->hall_ticket_no, 'admin/results/view/' . $id);
     }
 

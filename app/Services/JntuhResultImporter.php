@@ -455,15 +455,23 @@ class JntuhResultImporter
         return array_values($byKey);
     }
 
+    /**
+     * Matched on containment rather than equality, so the upstream's
+     * semesterSGPA / semesterCredits read as readily as a bare sgpa / credits.
+     * Only the node's own scalars are considered, so a subject's credits can
+     * never be mistaken for the semester's.
+     */
     protected function firstNumeric($node, array $names)
     {
         foreach ($node as $key => $value) {
-            if (!is_scalar($value)) {
+            if (!is_scalar($value) || !is_numeric($value)) {
                 continue;
             }
             $k = strtolower(preg_replace('/[^a-z]/i', '', (string) $key));
-            if (in_array($k, $names, true) && is_numeric($value)) {
-                return (float) $value;
+            foreach ($names as $name) {
+                if (strpos($k, $name) !== false) {
+                    return (float) $value;
+                }
             }
         }
         return null;
@@ -472,12 +480,14 @@ class JntuhResultImporter
     protected function firstString($node, array $names)
     {
         foreach ($node as $key => $value) {
-            if (!is_scalar($value)) {
+            if (!is_scalar($value) || trim((string) $value) === '') {
                 continue;
             }
             $k = strtolower(preg_replace('/[^a-z]/i', '', (string) $key));
-            if (in_array($k, $names, true) && trim((string) $value) !== '') {
-                return trim((string) $value);
+            foreach ($names as $name) {
+                if (strpos($k, $name) !== false) {
+                    return trim((string) $value);
+                }
             }
         }
         return '';
