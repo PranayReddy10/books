@@ -22,7 +22,7 @@ class JntuhResultImporter
 {
     /**
      * Flatten a payload into
-     *   ['student_name','father_name','college_code','regulation',
+     *   ['student_name','father_name','college_code','branch','regulation',
      *    'cgpa','total_credits','total_backlogs','semesters' => [...]]
      */
     public function normalize(array $payload)
@@ -31,6 +31,7 @@ class JntuhResultImporter
             'student_name'   => '',
             'father_name'    => '',
             'college_code'   => '',
+            'branch'         => '',
             'regulation'     => '',
             'cgpa'           => null,
             'total_credits'  => null,
@@ -100,6 +101,9 @@ class JntuhResultImporter
             }
             if ($normalized['regulation'] !== '' && !$result->regulation) {
                 $result->regulation = $normalized['regulation'];
+            }
+            if ($normalized['branch'] !== '' && !$result->branch) {
+                $result->branch = $normalized['branch'];
             }
             // Fetched straight from the university feed, so it counts as verified.
             $result->source   = 'jntuh';
@@ -218,6 +222,8 @@ class JntuhResultImporter
                     $out['father_name'] = $v;
                 } elseif ($out['college_code'] === '' && strpos($k, 'college') !== false) {
                     $out['college_code'] = $v;
+                } elseif ($out['branch'] === '' && $k === 'branch') {
+                    $out['branch'] = $v;
                 } elseif ($out['regulation'] === '' && strpos($k, 'regulation') !== false) {
                     $out['regulation'] = $v;
                 } elseif ($out['student_name'] === '' && in_array($k, ['name', 'studentname'], true)) {

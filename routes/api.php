@@ -27,6 +27,7 @@ Route::group(['prefix' => 'v1','namespace' => 'API'], function(){
     Route::post('result_get',      'AndroidApiController@result_get');
     Route::post('result_save',     'AndroidApiController@result_save');
     Route::post('result_fetch',    'AndroidApiController@result_fetch');
+    Route::post('hall_ticket_lookup', 'AndroidApiController@hall_ticket_lookup');
     Route::post('report_generate', 'AndroidApiController@report_generate');
 
     // Shop (MadeForU WooCommerce proxy — read-only; buying happens on the web).
