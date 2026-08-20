@@ -1615,13 +1615,21 @@ class AndroidApiController extends MainAPIController
 
         $post_id = $get_data['post_id'];
         $post_type = $get_data['post_type'];
+        $user_id = isset($get_data['user_id']) ? $get_data['user_id'] : '';
           
         //View Update
         post_views_save($post_id,$post_type);
 
         $post_views= post_views_count($post_id,$post_type);
 
-        $response[]=array("views"=>$post_views);
+        // Reading a student's upload pays its uploader, once per reader per book.
+        // Signed-out reads still count as views, they just earn nobody anything.
+        $coins_awarded = 0;
+        if ($post_type == 'post' && $user_id) {
+            $coins_awarded = (new \App\Services\CoinService())->creditRead($post_id, $user_id);
+        }
+
+        $response[]=array("views"=>$post_views, "coins_awarded"=>$coins_awarded);
          
          return \Response::json(array(            
             'EBOOK_APP' => $response,
@@ -2341,6 +2349,157 @@ class AndroidApiController extends MainAPIController
             : 'Uploaded. It will appear once approved by admin.';
 
         $response[] = array('msg' => $msg, 'post_id' => $post->id, 'auto_approved' => $is_verified ? '1' : '0', 'success' => '1');
+        return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+    }
+
+    /**
+     * coins_summary — the "My Coins" screen in one call: balance, what it is
+     * worth, and the per-book earnings behind it.
+     */
+    public function coins_summary()
+    {
+        $get_data = checkSignSalt($_POST['data']);
+        $user_id  = isset($get_data['user_id']) ? $get_data['user_id'] : '';
+
+        $user = User::where('id', $user_id)->first();
+        if (!$user) {
+            $response[] = array('msg' => 'Something went wrong', 'success' => '0');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        $coins = new \App\Services\CoinService();
+        if (!$coins->enabled()) {
+            $response[] = array('enabled' => 0, 'msg' => 'Coins are not available', 'success' => '1');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        $balance = $coins->balance($user_id);
+
+        $response[] = array(
+            'enabled'          => 1,
+            'balance'          => $balance,
+            'balance_value'    => (string) $coins->valueOf($balance),
+            'total_earned'     => $coins->totalEarned($user_id),
+            'total_redeemed'   => $coins->totalRedeemed($user_id),
+            'coins_per_read'   => $coins->coinsPerRead(),
+            'coins_per_upload' => $coins->coinsPerUpload(),
+            'coin_value'       => (string) $coins->coinValue(),
+            'min_redeem'       => $coins->minRedeem(),
+            'can_redeem'       => $balance >= $coins->minRedeem() ? 1 : 0,
+            'currency'         => (string) getcong('currency_symbol'),
+            'books'            => $coins->bookBreakdown($user_id),
+            'msg'              => 'OK',
+            'success'          => '1',
+        );
+        return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+    }
+
+    /** coins_history — the ledger, newest first. */
+    public function coins_history()
+    {
+        $get_data = checkSignSalt($_POST['data']);
+        $user_id  = isset($get_data['user_id']) ? $get_data['user_id'] : '';
+        $page     = isset($get_data['page']) ? max(1, (int) $get_data['page']) : 1;
+
+        if (!User::where('id', $user_id)->exists()) {
+            $response[] = array('msg' => 'Something went wrong', 'success' => '0');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        $rows = \App\CoinTransaction::where('user_id', $user_id)
+            ->orderBy('id', 'DESC')
+            ->skip(($page - 1) * 30)->take(30)->get();
+
+        $response = array();
+        foreach ($rows as $r) {
+            $response[] = array(
+                'id'    => $r->id,
+                'type'  => (string) $r->type,
+                'coins' => (int) $r->coins,
+                'note'  => (string) $r->note,
+                'date'  => $r->created_at ? $r->created_at->format('d M Y') : '',
+                'success' => '1',
+            );
+        }
+        if (empty($response)) {
+            $response[] = array('msg' => 'No activity yet', 'success' => '0');
+        }
+        return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+    }
+
+    /**
+     * coins_redeem — spend coins on a shop gift card. The code comes back ready
+     * to paste into the coupon box at checkout.
+     */
+    public function coins_redeem()
+    {
+        $get_data = checkSignSalt($_POST['data']);
+        $user_id  = isset($get_data['user_id']) ? $get_data['user_id'] : '';
+        $amount   = isset($get_data['coins']) ? (int) $get_data['coins'] : 0;
+
+        if (!User::where('id', $user_id)->exists()) {
+            $response[] = array('msg' => 'Something went wrong', 'success' => '0');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        $coins = new \App\Services\CoinService();
+        try {
+            $redemption = $coins->redeem($user_id, $amount);
+        } catch (\RuntimeException $e) {
+            $response[] = array('msg' => $e->getMessage(), 'success' => '0');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        } catch (\Exception $e) {
+            \Log::error('coins_redeem failed: ' . $e->getMessage());
+            $response[] = array('msg' => 'Could not redeem right now. Please try again.', 'success' => '0');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        $issued = $redemption->status === \App\CoinRedemption::STATUS_ISSUED;
+
+        $response[] = array(
+            'redemption_id' => $redemption->id,
+            'code'          => $issued ? (string) $redemption->code : '',
+            'amount'        => (string) $redemption->amount,
+            'coins'         => (int) $redemption->coins,
+            'status'        => (string) $redemption->status,
+            'balance'       => $coins->balance($user_id),
+            'msg'           => $issued
+                                ? 'Gift card ready. Use this code at checkout.'
+                                : 'Your coins are reserved. The gift card will arrive shortly.',
+            'success'       => '1',
+        );
+        return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+    }
+
+    /** coins_cards — gift cards this student already holds. */
+    public function coins_cards()
+    {
+        $get_data = checkSignSalt($_POST['data']);
+        $user_id  = isset($get_data['user_id']) ? $get_data['user_id'] : '';
+
+        if (!User::where('id', $user_id)->exists()) {
+            $response[] = array('msg' => 'Something went wrong', 'success' => '0');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
+        $rows = \App\CoinRedemption::where('user_id', $user_id)->orderBy('id', 'DESC')->get();
+
+        $response = array();
+        foreach ($rows as $r) {
+            $response[] = array(
+                'redemption_id' => $r->id,
+                // A code is only useful once the shop has actually minted it.
+                'code'   => $r->status === \App\CoinRedemption::STATUS_ISSUED ? (string) $r->code : '',
+                'coins'  => (int) $r->coins,
+                'amount' => (string) $r->amount,
+                'status' => (string) $r->status,
+                'date'   => $r->created_at ? $r->created_at->format('d M Y') : '',
+                'success' => '1',
+            );
+        }
+        if (empty($response)) {
+            $response[] = array('msg' => 'No gift cards yet', 'success' => '0');
+        }
         return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
     }
 
