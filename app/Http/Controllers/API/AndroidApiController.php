@@ -1625,7 +1625,7 @@ class AndroidApiController extends MainAPIController
         // Reading a student's upload pays its uploader, once per reader per book.
         // Signed-out reads still count as views, they just earn nobody anything.
         $coins_awarded = 0;
-        if ($post_type == 'post' && $user_id) {
+        if ($user_id && strcasecmp((string) $post_type, 'Book') === 0) {
             $coins_awarded = (new \App\Services\CoinService())->creditRead($post_id, $user_id);
         }
 
