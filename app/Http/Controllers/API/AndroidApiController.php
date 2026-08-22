@@ -2389,8 +2389,16 @@ class AndroidApiController extends MainAPIController
         }
 
         $coins = new \App\Services\CoinService();
-        if (!$coins->enabled()) {
-            $response[] = array('enabled' => 0, 'msg' => 'Coins are not available', 'success' => '1');
+        $blocked = $coins->unavailableReason();
+        if ($blocked !== '') {
+            $response[] = array(
+                'enabled' => 0,
+                'reason'  => $blocked,
+                'msg'     => $blocked === 'setup'
+                    ? 'Coins are not set up on the server yet. Please run the pending database update.'
+                    : 'Coins are switched off at the moment.',
+                'success' => '1',
+            );
             return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
         }
 
