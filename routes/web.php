@@ -75,6 +75,16 @@ Route::group(['namespace' => 'Admin', 'prefix' => 'admin'], function () {
     Route::get('results-recompute-all', 'ResultsController@recomputeAll')->middleware('adminpermission:results.edit');
     Route::get('results/delete/{id}', 'ResultsController@delete')->middleware('adminpermission:results.delete');
     Route::get('report_cards', 'ResultsController@cards')->middleware('adminpermission:results.view');
+
+    // Coins: earnings, balances and shop gift cards.
+    Route::get('coins', 'CoinsController@index')->middleware('adminpermission:users.view');
+    Route::get('coins/user/{id}', 'CoinsController@user')->middleware('adminpermission:users.view');
+    Route::post('coins/adjust/{id}', 'CoinsController@adjust')->middleware('adminpermission:users.edit');
+    Route::get('coin_redemptions', 'CoinsController@redemptions')->middleware('adminpermission:users.view');
+    Route::get('coin_redemptions/retry/{id}', 'CoinsController@retry')->middleware('adminpermission:users.edit');
+    Route::get('coin_redemptions/cancel/{id}', 'CoinsController@cancel')->middleware('adminpermission:users.edit');
+    Route::get('coin_settings', 'CoinsController@settings')->middleware('adminpermission:settings.view');
+    Route::post('coin_settings', 'CoinsController@update_settings')->middleware('adminpermission:settings.edit');
     Route::get('results/add',   'ResultsController@add')->middleware('adminpermission:results.edit');
     Route::post('results/jntuh-fetch', 'ResultsController@jntuhFetch')->middleware('adminpermission:results.edit');
     Route::get('results/jntuh-refetch/{id}', 'ResultsController@jntuhRefetch')->middleware('adminpermission:results.edit');

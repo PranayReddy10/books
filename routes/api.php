@@ -30,6 +30,12 @@ Route::group(['prefix' => 'v1','namespace' => 'API'], function(){
     Route::post('hall_ticket_lookup', 'AndroidApiController@hall_ticket_lookup');
     Route::post('report_generate', 'AndroidApiController@report_generate');
 
+    // Coins: earned on reads of your uploads, spent on shop gift cards.
+    Route::post('coins_summary', 'AndroidApiController@coins_summary');
+    Route::post('coins_history', 'AndroidApiController@coins_history');
+    Route::post('coins_redeem',  'AndroidApiController@coins_redeem');
+    Route::post('coins_cards',   'AndroidApiController@coins_cards');
+
     // Shop (MadeForU WooCommerce proxy — read-only; buying happens on the web).
     Route::post('shop_categories',     'ShopController@shop_categories');
     Route::post('shop_products',       'ShopController@shop_products');

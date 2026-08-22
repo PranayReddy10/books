@@ -1781,6 +1781,55 @@ if (!function_exists('woo_get')) {
     }
 }
 
+if (!function_exists('woo_post')) {
+    /**
+     * Write to the WooCommerce API — used to mint a gift-card coupon when a
+     * student redeems coins. Deliberately uncached, unlike woo_get: a POST is
+     * not a lookup, and replaying one would issue a second coupon.
+     *
+     * Returns the decoded response, or null when the call did not succeed, so
+     * the caller can tell "no coupon" from "an empty coupon".
+     */
+    function woo_post($path, array $payload)
+    {
+        $cfg = config('services.woocommerce');
+        if (empty($cfg['base']) || empty($cfg['key']) || empty($cfg['secret'])) {
+            \Log::warning('WooCommerce write skipped: credentials missing');
+            return null;
+        }
+
+        $url = rtrim($cfg['base'], '/') . '/wp-json/wc/v3/' . ltrim($path, '/');
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, TRUE);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            'Accept: application/json',
+            'Content-Type: application/json',
+        ));
+        curl_setopt($ch, CURLOPT_USERPWD, $cfg['key'] . ':' . $cfg['secret']);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, TRUE);
+        $body = curl_exec($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err  = curl_error($ch);
+        curl_close($ch);
+
+        if ($err || $code < 200 || $code >= 300) {
+            \Log::warning('WooCommerce write failed', array(
+                'url' => $url, 'http_code' => $code, 'curl_error' => $err,
+                'body' => is_string($body) ? substr($body, 0, 500) : '',
+            ));
+            return null;
+        }
+
+        $decoded = json_decode($body, true);
+        return is_array($decoded) ? $decoded : null;
+    }
+}
+
 if (!function_exists('woo_price')) {
     /** Format a Woo price string to a clean number string (no trailing noise). */
     function woo_price($v)

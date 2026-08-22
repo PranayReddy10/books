@@ -71,7 +71,13 @@ class UserBooksController extends MainAdminController
         $book->status = 1; // go live
         $book->save();
 
-        \Session::flash('flash_message', 'Book approved and published.');
+        // Approval is when an upload earns its coins — paid once per book,
+        // however many times it is re-approved.
+        $coins = (new \App\Services\CoinService())->creditUpload($book->id);
+
+        \Session::flash('flash_message', $coins > 0
+            ? 'Book approved and published. ' . $coins . ' coins awarded to the uploader.'
+            : 'Book approved and published.');
         return redirect()->back();
     }
 
