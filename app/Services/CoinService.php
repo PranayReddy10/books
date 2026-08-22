@@ -23,10 +23,25 @@ class CoinService
     /** Coins are off, or the tables were never migrated. */
     public function enabled()
     {
+        return $this->unavailableReason() === '';
+    }
+
+    /**
+     * Why coins are unavailable, or '' when they are fine.
+     *
+     * Worth separating: "the admin switched it off" and "this server never ran
+     * the migration" look identical to a student but need opposite fixes, and
+     * the second one is invisible unless something says it out loud.
+     */
+    public function unavailableReason()
+    {
         if (!Schema::hasTable('coin_transactions')) {
-            return false;
+            return 'setup';
         }
-        return (int) $this->setting('coins_enabled', 1) === 1;
+        if ((int) $this->setting('coins_enabled', 1) !== 1) {
+            return 'disabled';
+        }
+        return '';
     }
 
     public function coinsPerRead()

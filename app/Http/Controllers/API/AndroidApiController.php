@@ -2143,8 +2143,24 @@ class AndroidApiController extends MainAPIController
 
         $data_list = Books::where('uploaded_by', $user_id)->orderBy('id', 'DESC')->get();
 
+        // How each book performed and what it paid, so the uploader can see it
+        // per book rather than only as one total on the coins screen.
+        $coin_service = new \App\Services\CoinService();
+        $coins_on = $coin_service->enabled();
+        $earned = array();
+        if ($coins_on) {
+            $rows = \App\CoinTransaction::where('user_id', $user_id)
+                ->where('type', \App\CoinTransaction::TYPE_READ)
+                ->selectRaw('book_id, SUM(coins) as coins, COUNT(*) as reads')
+                ->groupBy('book_id')->get();
+            foreach ($rows as $row) {
+                $earned[(int) $row->book_id] = array('coins' => (int) $row->coins, 'reads' => (int) $row->reads);
+            }
+        }
+
         $response = array();
         foreach ($data_list as $obj_data) {
+            $stat = isset($earned[$obj_data->id]) ? $earned[$obj_data->id] : array('coins' => 0, 'reads' => 0);
             $response[] = array(
                 'post_id'       => $obj_data->id,
                 'post_title'    => stripslashes($obj_data->title),
@@ -2152,6 +2168,11 @@ class AndroidApiController extends MainAPIController
                 'cover_color'   => (\App\Category::getCategoryInfo($obj_data->cat_id, 'category_color') ?: '#4a7dff'),
                 'upload_status' => $obj_data->upload_status,
                 'reject_reason' => $obj_data->reject_reason,
+                'coins_enabled' => $coins_on ? 1 : 0,
+                'total_views'   => (int) post_views_count($obj_data->id, 'Book'),
+                // Distinct readers who earned coins, not raw views.
+                'reader_count'  => $stat['reads'],
+                'coins_earned'  => $stat['coins'],
             );
         }
 
@@ -2368,8 +2389,16 @@ class AndroidApiController extends MainAPIController
         }
 
         $coins = new \App\Services\CoinService();
-        if (!$coins->enabled()) {
-            $response[] = array('enabled' => 0, 'msg' => 'Coins are not available', 'success' => '1');
+        $blocked = $coins->unavailableReason();
+        if ($blocked !== '') {
+            $response[] = array(
+                'enabled' => 0,
+                'reason'  => $blocked,
+                'msg'     => $blocked === 'setup'
+                    ? 'Coins are not set up on the server yet. Please run the pending database update.'
+                    : 'Coins are switched off at the moment.',
+                'success' => '1',
+            );
             return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
         }
 
