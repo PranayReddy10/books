@@ -2145,17 +2145,25 @@ class AndroidApiController extends MainAPIController
 
         // How each book performed and what it paid, so the uploader can see it
         // per book rather than only as one total on the coins screen.
-        $coin_service = new \App\Services\CoinService();
-        $coins_on = $coin_service->enabled();
+        // The earnings are a nice-to-have on this screen; the list of books is
+        // not. Keep the coins part from being able to take the whole list down.
+        $coins_on = false;
         $earned = array();
-        if ($coins_on) {
-            $rows = \App\CoinTransaction::where('user_id', $user_id)
-                ->where('type', \App\CoinTransaction::TYPE_READ)
-                ->selectRaw('book_id, SUM(coins) as coins, COUNT(*) as reads')
-                ->groupBy('book_id')->get();
-            foreach ($rows as $row) {
-                $earned[(int) $row->book_id] = array('coins' => (int) $row->coins, 'reads' => (int) $row->reads);
+        try {
+            $coins_on = (new \App\Services\CoinService())->enabled();
+            if ($coins_on) {
+                $rows = \App\CoinTransaction::where('user_id', $user_id)
+                    ->where('type', \App\CoinTransaction::TYPE_READ)
+                    // READS is a reserved word in MySQL; the alias must not be it.
+                    ->selectRaw('book_id, SUM(coins) as total_coins, COUNT(*) as read_count')
+                    ->groupBy('book_id')->get();
+                foreach ($rows as $row) {
+                    $earned[(int) $row->book_id] = array('coins' => (int) $row->total_coins, 'reads' => (int) $row->read_count);
+                }
             }
+        } catch (\Exception $e) {
+            \Log::error('my_uploaded_books coin stats failed: ' . $e->getMessage());
+            $coins_on = false;
         }
 
         $response = array();

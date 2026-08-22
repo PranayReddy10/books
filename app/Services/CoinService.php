@@ -316,7 +316,8 @@ class CoinService
 
         $earned = CoinTransaction::where('user_id', $userId)
             ->where('type', CoinTransaction::TYPE_READ)
-            ->selectRaw('book_id, SUM(coins) as coins, COUNT(*) as reads')
+            // READS is a reserved word in MySQL, so the alias has to be something else.
+                ->selectRaw('book_id, SUM(coins) as total_coins, COUNT(*) as read_count')
             ->groupBy('book_id')
             ->get()
             ->keyBy('book_id');
@@ -330,8 +331,8 @@ class CoinService
                 'image'   => function_exists('book_asset_url') ? book_asset_url($b->image) : (string) $b->image,
                 'status'  => (string) $b->upload_status,
                 'views'   => (int) (function_exists('post_views_count') ? post_views_count($b->id, 'post') : 0),
-                'reads'   => $row ? (int) $row->reads : 0,
-                'coins'   => $row ? (int) $row->coins : 0,
+                'reads'   => $row ? (int) $row->read_count : 0,
+                'coins'   => $row ? (int) $row->total_coins : 0,
             ];
         }
         return $out;
