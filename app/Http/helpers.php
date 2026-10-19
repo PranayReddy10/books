@@ -1830,6 +1830,71 @@ if (!function_exists('woo_post')) {
     }
 }
 
+if (!function_exists('mfu_get')) {
+    /**
+     * GET against the MadeForU store's product API (madeforu.co.in/api/v1), with
+     * short-lived caching so we don't hammer the store on every app open. The key
+     * goes in a header, from the server's .env only. Returns the decoded body,
+     * or [] on any failure (never throws into the app response).
+     *
+     * @param string $path  e.g. 'products', 'products/12', 'categories'
+     * @param array  $query e.g. ['category' => 'magnets', 'q' => 'mug', 'page' => 2]
+     * @param int    $ttl   cache seconds (default 300 = 5 min)
+     */
+    function mfu_get($path, $query = array(), $ttl = 300)
+    {
+        $cfg = config('services.madeforu');
+        if (empty($cfg['base']) || empty($cfg['key'])) {
+            \Log::warning('MadeForU API skipped: MADEFORU_API_KEY missing');
+            return array();
+        }
+
+        $url = rtrim($cfg['base'], '/') . '/api/v1/' . ltrim($path, '/');
+        if (!empty($query)) {
+            $url .= '?' . http_build_query($query);
+        }
+
+        $cacheKey = 'mfu_' . md5($url);
+        try {
+            $cached = \Cache::get($cacheKey);
+            if (is_array($cached)) {
+                return $cached;
+            }
+
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+                'Accept: application/json',
+                'X-Api-Key: ' . $cfg['key'],
+            ));
+            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, TRUE);
+            $body = curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $err  = curl_error($ch);
+            curl_close($ch);
+
+            if ($err || $code < 200 || $code >= 300) {
+                \Log::warning('MadeForU API fetch failed', array(
+                    'url' => $url, 'http_code' => $code, 'curl_error' => $err,
+                ));
+                return array();
+            }
+            $decoded = json_decode($body, true);
+            if (!is_array($decoded)) {
+                return array();
+            }
+            // Only successes are cached, so a blip at the store is retried next open.
+            \Cache::put($cacheKey, $decoded, $ttl);
+            return $decoded;
+        } catch (\Exception $e) {
+            \Log::warning('MadeForU API cache/get error: ' . $e->getMessage());
+            return array();
+        }
+    }
+}
+
 if (!function_exists('woo_price')) {
     /** Format a Woo price string to a clean number string (no trailing noise). */
     function woo_price($v)

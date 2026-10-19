@@ -31,16 +31,23 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
-    // MadeForU WooCommerce store (read-only product data for the app Shop tab).
-    // Generate a READ-ONLY key: WooCommerce -> Settings -> Advanced -> REST API.
-    // Keep these on the server only; never ship them in the Android app.
+    // MadeForU store (Laravel site, madeforu.co.in) — product API for the app
+    // Shop tab. Keep the key on the server only; never ship it in the Android app.
+    'madeforu' => [
+        'base'      => env('MADEFORU_BASE', 'https://madeforu.co.in'),
+        'key'       => env('MADEFORU_API_KEY'),
+        // Web URLs the app opens in a WebView for buying / tracking.
+        'shop_url'  => env('MADEFORU_SHOP_URL', 'https://madeforu.co.in/shop/'),
+        'track_url' => env('MADEFORU_TRACK_URL', 'https://madeforu.co.in/track-order'),
+    ],
+
+    // Old WooCommerce store API. Only coin gift-card coupons still use it; the
+    // Laravel store has no coupon API yet, so without these a redemption is left
+    // "failed" for an admin to retry or cancel.
     'woocommerce' => [
-        'base'   => env('WOO_BASE', 'https://madeforu.co.in'),
+        'base'   => env('WOO_BASE'),
         'key'    => env('WOO_CONSUMER_KEY'),
         'secret' => env('WOO_CONSUMER_SECRET'),
-        // Web URLs the app opens in a WebView for buying / tracking.
-        'shop_url'  => env('WOO_SHOP_URL', 'https://madeforu.co.in/shop/'),
-        'track_url' => env('WOO_TRACK_URL', 'https://madeforu.co.in/tracking-order/'),
     ],
 
 ];
