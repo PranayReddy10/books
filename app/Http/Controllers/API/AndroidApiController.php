@@ -1945,6 +1945,15 @@ class AndroidApiController extends MainAPIController
         $regulation= isset($get_data['regulation']) ? $get_data['regulation'] : '';
         $father_name= isset($get_data['father_name']) ? $get_data['father_name'] : '';
         
+        // Every account needs these; the app checks them too, this covers old builds.
+        if (!$this->isProfileComplete((object) array(
+            'phone' => $phone, 'gender' => $gender, 'university' => $university,
+            'department_id' => $department_id, 'college' => $college,
+        )) || trim((string) $email) === '') {
+            $response[] = array('msg' => 'Please fill in phone, email, gender, university, department and college.','success'=>'0');
+            return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+        }
+
         $check_email = User::where('email', $email)->first();
 
         if($check_email)
@@ -2839,7 +2848,7 @@ class AndroidApiController extends MainAPIController
                  $finduser->save();
                  }
                  $finduser->touchLogin('app');
-                 $profile_complete = ($finduser->university && $finduser->department_id && $finduser->college) ? '1' : '0';
+                 $profile_complete = $this->isProfileComplete($finduser) ? '1' : '0';
                  $response[] = array('user_id' => $finduser->id,'name' => $finduser->name,'username' => $finduser->username ?: '','email' => $finduser->email,'phone' => $phone,'user_image' => $user_image,'profile_complete' => $profile_complete,'msg' => trans('words.login_success'),'success'=>'1');
 
                 }
@@ -2910,8 +2919,8 @@ class AndroidApiController extends MainAPIController
             $user->save();
             }
             $user->touchLogin('app');
-            // Brand-new social user: never has university/dept/college yet.
-            $profile_complete = ($user->university && $user->department_id && $user->college) ? '1' : '0';
+            // Brand-new social user: Google gives no phone, gender or college yet.
+            $profile_complete = $this->isProfileComplete($user) ? '1' : '0';
             $response[] = array('user_id' => $user_id,'name' => $user->name,'username' => $user->username ?: '','email' => $user->email,'phone' => $phone,'user_image' => $user_image,'profile_complete' => $profile_complete,'msg' => trans('words.login_success'),'success'=>'1');
 
 
@@ -3252,6 +3261,21 @@ class AndroidApiController extends MainAPIController
             'success'        => '1',
         );
         return \Response::json(array('EBOOK_APP' => $response, 'status_code' => 200, 'success' => 1));
+    }
+
+    /**
+     * Fields every student account must have before using the app. Google
+     * sign-in only gives a name and email, so those users are sent to the
+     * complete-profile screen until these are all filled.
+     */
+    protected function isProfileComplete($user)
+    {
+        foreach (array('phone', 'gender', 'university', 'department_id', 'college') as $field) {
+            if (!isset($user->$field) || trim((string) $user->$field) === '') {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -3663,8 +3687,17 @@ class AndroidApiController extends MainAPIController
         
         
         $user_obj->name = $get_data['name'];          
-        $user_obj->email = $get_data['email']; 
-        $user_obj->phone = $get_data['phone'];
+        // Phone and email are required on every account, so a blank value
+        // (e.g. from an older app's complete-profile screen) leaves them as they are.
+        if (isset($get_data['email']) && trim($get_data['email']) !== '') {
+            $user_obj->email = $get_data['email'];
+        }
+        if (isset($get_data['phone']) && trim($get_data['phone']) !== '') {
+            $user_obj->phone = trim($get_data['phone']);
+        }
+        if (isset($get_data['gender']) && $get_data['gender'] !== '') {
+            $user_obj->gender = $get_data['gender'];
+        }
         
         
         // Optional academic fields (used by the Google "complete profile" flow and
