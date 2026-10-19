@@ -317,7 +317,7 @@ class UsersController extends MainAdminController
             
         }
 
-          return Excel::download(new UsersExport, 'users.csv');
+          return Excel::download(new UsersExport, 'users-'.date('Y-m-d').'.xlsx');
 
     }
     
