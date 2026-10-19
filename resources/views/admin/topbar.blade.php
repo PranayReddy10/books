@@ -25,26 +25,25 @@
             <ul class="list-unstyled topbar-right-menu float-right mb-0">
                
               <li class="dropdown notification-list">
-                <a class="nav-link dropdown-toggle waves-effect waves-light nav-user" data-toggle="dropdown" href="#"
+                <a class="nav-link dropdown-toggle waves-effect nav-user topbar-user" data-toggle="dropdown" href="#"
                   role="button" aria-haspopup="false" aria-expanded="false">
-
-                  @if(Auth::user()->user_image!='')                                 
- 
-                  <img src="{{ user_image_url(Auth::user()->user_image) }}" alt="person" class="rounded-circle" />
-                   
+                  @if(Auth::user()->user_image!='')
+                  <img src="{{ user_image_url(Auth::user()->user_image) }}" alt="" class="rounded-circle" />
                   @else
-                      
-                  <img src="{{ URL::asset('admin_assets/images/users/avatar-10.jpg') }}" alt="person" class="rounded-circle" />
-                  
+                  <img src="{{ URL::asset('admin_assets/images/users/avatar-10.jpg') }}" alt="" class="rounded-circle" />
                   @endif
-
-                 </a>
-                <div class="dropdown-menu dropdown-menu-right profile-dropdown ">
+                  <span class="topbar-user-name">{{ Auth::user()->name }}
+                    <span class="topbar-user-role">{{ Auth::user()->usertype=="Admin" ? 'Administrator' : 'Sub Admin' }}</span>
+                  </span>
+                  <i class="fa fa-angle-down"></i>
+                </a>
+                <div class="dropdown-menu dropdown-menu-right profile-dropdown">
                   <a href="{{ URL::to('admin/profile') }}" class="dropdown-item notify-item">
-                    <i class="ti-user m-r-5"></i> {{trans('words.profile')}}
+                    <i class="fa fa-user-o"></i> {{trans('words.profile')}}
                   </a>
-                  <a href="{{ URL::to('admin/logout') }}" class="dropdown-item notify-item">
-                    <i class="ti-power-off m-r-5"></i> {{trans('words.logout')}}
+                  <div class="dropdown-divider"></div>
+                  <a href="{{ URL::to('admin/logout') }}" class="dropdown-item notify-item text-danger">
+                    <i class="fa fa-sign-out"></i> {{trans('words.logout')}}
                   </a>
                 </div>
               </li>

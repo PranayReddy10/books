@@ -74,7 +74,7 @@ a:hover .hover-img span {
                         </a>  
                        
                       </td>
-                       <td>{{ stripslashes($data->message) }}</td>
+                       <td class="wrap">{{ stripslashes($data->message) }}</td>
                        <td>{{ Str::limit(\App\PostRatings::getRatingsInfo($data->review_id,'review_text'), 30) }}</td>
                        <td>{{ date('M d Y h:i a',$data->date) }}</td>
                      

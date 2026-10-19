@@ -74,7 +74,7 @@ a:hover .hover-img span {
                         </a>  
                        
                       </td>
-                       <td>{{ stripslashes($data->review_text) }}</td>
+                       <td class="wrap">{{ stripslashes($data->review_text) }}</td>
                        <td>{{ $data->rate }}</td>
                        <td>{{ date('M d Y h:i a',$data->date) }}</td>
                      

@@ -28,7 +28,10 @@
      <link href="{{ URL::asset('admin_assets/css/style.css') }}" rel="stylesheet" type="text/css" />
       <link href="{{ URL::asset('admin_assets/css/font-awesome.min.css') }}" rel="stylesheet" type="text/css" />  
 
-     <link href="{{ URL::asset('admin_assets/css/admin-light.css') }}?v=15" rel="stylesheet" type="text/css" />
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+     <link href="{{ URL::asset('admin_assets/css/admin-light.css') }}?v=16" rel="stylesheet" type="text/css" />
 
      <script src="{{ URL::asset('admin_assets/js/modernizr.min.js') }}"></script>
      

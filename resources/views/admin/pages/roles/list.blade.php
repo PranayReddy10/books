@@ -30,7 +30,7 @@
                 @foreach($list as $role)
                 <tr>
                   <td><b>{{ $role->name }}</b> @if($role->is_system)<span class="badge badge-secondary">system</span>@endif</td>
-                  <td>{{ $role->description }}</td>
+                  <td class="wrap">{{ $role->description }}</td>
                   <td>{{ count($role->permissionList()) }} granted</td>
                   <td>{{ $role->memberCount() }}</td>
                   <td style="white-space:nowrap">

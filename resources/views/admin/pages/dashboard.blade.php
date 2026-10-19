@@ -9,10 +9,10 @@
 ============================================================ --}}
 <style>
 .saas-dash { --accent:#4a7dff; --ink:#1f2937; --muted:#6b7280; --line:#eef1f6; --bg:#f6f8fb; }
-.saas-dash { background: var(--bg); margin:-20px -12px 0; padding:24px 20px 8px; }
+.saas-dash { background: var(--bg); padding:0 0 8px; }
 .saas-dash .dash-head { margin:0 4px 20px; }
 .saas-dash .dash-head h3 { font-size:22px; font-weight:700; color:var(--ink); margin:0; }
-.saas-dash .dash-head p { color:var(--muted); margin:4px 0 0; font-size:13px; }
+.saas-dash .dash-head p { color:var(--muted); margin:0; font-size:13.5px; }
 .saas-dash .stat-card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px; display:flex; align-items:center; gap:14px; transition:transform .15s ease, box-shadow .15s ease; height:100%; }
 .saas-dash a:hover .stat-card { transform:translateY(-3px); box-shadow:0 10px 24px rgba(31,41,55,.08); }
 .saas-dash a { text-decoration:none !important; }
@@ -47,7 +47,6 @@
       <div class="saas-dash">
 
         <div class="dash-head">
-          <h3>{{ $page_title }}</h3>
           <p>Overview of your library, users and activity</p>
         </div>
 

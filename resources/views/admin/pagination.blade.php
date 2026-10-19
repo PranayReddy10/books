@@ -5,7 +5,7 @@ $link_limit = 8; // maximum number of links (a little bit inaccurate, but will b
 
 @if ($paginator->lastPage() > 1)
     <ul class="pagination">
-        <li class="{{ ($paginator->currentPage() == 1) ? ' disabled' : '' }}">
+        <li class="page-item{{ ($paginator->currentPage() == 1) ? ' disabled' : '' }}">
             <a class="page-link" href="{{ $paginator->url(1) }}" data-toggle="tooltip" title="Previous">                    
                     <span aria-hidden="true">&laquo;</span>
                     <span class="sr-only">Previous</span>
@@ -29,7 +29,7 @@ $link_limit = 8; // maximum number of links (a little bit inaccurate, but will b
                 </li>
             @endif
         @endfor
-        <li class="{{ ($paginator->currentPage() == $paginator->lastPage()) ? ' disabled' : '' }}">
+        <li class="page-item{{ ($paginator->currentPage() == $paginator->lastPage()) ? ' disabled' : '' }}">
             <a class="page-link" href="{{ $paginator->url($paginator->lastPage()) }}" data-toggle="tooltip" title="Next">
                 <span aria-hidden="true">&raquo;</span>
                 <span class="sr-only">Next</span>

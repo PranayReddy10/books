@@ -7,9 +7,9 @@
         <div class="container-fluid">
           <div class="row">
             <div class="col-xl-12">
-              <div class="card-box" style="color: #a9b7c6;">
+              <div class="card-box" style="color:#334155;line-height:1.5;">
                 <h3 style="font-weight: 600;">APIs</h3>
-                 <code style="color: #a9b7c6;background: #2b3751;padding: 5px 10px;font-size: 14px;font-weight: 600;"> API URL  {{$base_url}}</code><br/><br/>
+                 <code style="color:#1d4ed8;background:#eaf1ff;padding:6px 12px;border-radius:8px;font-size:13.5px;font-weight:600;"> API URL  {{$base_url}}</code><br/><br/>
                   <b>App Details:</b>  (Method: app_details)<br/><br/>
   
                   <br/>
