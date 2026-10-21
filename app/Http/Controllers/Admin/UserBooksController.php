@@ -36,10 +36,12 @@ class UserBooksController extends MainAdminController
         $list = $query->orderBy('id', 'DESC')->paginate(15);
 
         $pending_count = Books::whereNotNull('uploaded_by')->where('upload_status', 'pending')->count();
+        $approved_count = Books::whereNotNull('uploaded_by')->where('upload_status', 'approved')->count();
+        $rejected_count = Books::whereNotNull('uploaded_by')->where('upload_status', 'rejected')->count();
 
         $page_title = 'User Uploaded Books';
 
-        return view('admin.pages.user_books.list', compact('page_title', 'list', 'filter', 'pending_count'));
+        return view('admin.pages.user_books.list', compact('page_title', 'list', 'filter', 'pending_count', 'approved_count', 'rejected_count'));
     }
 
     public function approve($id)

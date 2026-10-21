@@ -130,45 +130,53 @@
                   </div>                
                 </div>
 
-                <br/>
-
-                <div class="row">
-                  @foreach($list as $i => $data)
-                    <div class="col-lg-3 col-md-4 col-sm-6 col-xs-6" id="card_box_id_{{$data->id}}">
-
-                        <!-- Simple card -->
-                        <div class="card m-b-20">
-                            <div class="wall-list-item">
-                              <div class="checkbox checkbox-success wall_check">
-                                <input type="checkbox" name="post_ids[]" id="checkbox<?php echo $i; ?>" value="<?php echo $data->id; ?>" class="post_ids">
-                                <label for="checkbox<?php echo $i; ?>"></label>
-                              </div> 
-							  <p class="wall_sub_text">{{ \App\Category::getCategoryInfo($data->cat_id,'category_name') }} - {{ \App\SubCategory::getSubCategoryInfo($data->sub_cat_id,'sub_category_name') }}</p>
-                               
-                              @include('admin.partials.book_cover', ['book' => $data])
-                            </div>
- 
-                            <div class="card-body p-3">
-                                <h4 class="card-title book_title mb-3 align-items-center">@if(isset($data->content_type) && $data->content_type=='video')<span style="background:#e53935;color:#fff;font-size:10px;padding:2px 7px;border-radius:4px;margin-right:6px;vertical-align:middle"><i class="fa fa-play"></i> VIDEO</span>@endif{{ stripslashes($data->title) }}</h4>
-								<div class="d-flex wall_preview_item">
-                                  <ul>
-                                    <li><a href="javascript:void(0)" data-toggle="tooltip" title="{{$data->featured?'Remove Slider':'Set Slider'}}" data-id="{{$data->id}}" data-value="{{$data->featured?'false':'true'}}" class="slider_enable_disable" style="{{$data->featured?'color: green':''}}" id="slider_id{{$data->id}}"><i class="fa fa-sliders"></i></a></li> 
-                                    <li><a href="javascript:void(0)" data-toggle="tooltip" title="{{post_views_count($data->id,"Book")}} Views"><i class="fa fa-eye"></i></a></li>            
-                                    <li><a href="javascript:void(0)" data-toggle="tooltip" title="{{\App\PostRatings::getPostTotalRatings($data->id,"Book")}} Rating"><i class="fa fa-star"></i></a></li>
-                                    <li><a href="javascript:void(0)" data-toggle="tooltip" title="{{post_download_count($data->id,"Book")}} Download"><i class="fa fa-download"></i></a></li>
-                                  </ul>
-                                </div>
-                                <a href="{{ url('admin/books/edit/'.$data->id) }}" class="btn btn-icon waves-effect waves-light btn-success m-r-5" data-toggle="tooltip" title="{{trans('words.edit')}}"> <i class="fa fa-edit"></i> </a>
-                                <a href="#" class="btn btn-icon waves-effect waves-light btn-danger data_remove" data-toggle="tooltip" title="{{trans('words.remove')}}" data-id="{{$data->id}}"> <i class="fa fa-remove"></i> </a>
-                                <a class="ml-2" href="Javascript:void(0);" data-toggle="tooltip" title="@if($data->status==1){{ trans('words.active')}} @else {{trans('words.inactive')}} @endif"><input type="checkbox" name="category_on_off" id="book_enable_disable{{$data->id}}" value="1" data-plugin="switchery" data-color="#28a745" data-size="small" class="enable_disable"  data-id="{{$data->id}}" @if($data->status==1) {{ 'checked' }} @endif/></a>    
-                            </div>
+                <div class="bk-grid">
+                  @forelse($list as $i => $data)
+                    @php
+                      $cat_name = \App\Category::getCategoryInfo($data->cat_id,'category_name');
+                      $sub_name = $data->sub_cat_id ? \App\SubCategory::getSubCategoryInfo($data->sub_cat_id,'sub_category_name') : '';
+                      $is_video = isset($data->content_type) && $data->content_type=='video';
+                    @endphp
+                    <div class="bk" id="card_box_id_{{$data->id}}">
+                      <div class="bk-cover">
+                        <div class="checkbox checkbox-success wall_check bk-check">
+                          <input type="checkbox" name="post_ids[]" id="checkbox{{ $i }}" value="{{ $data->id }}" class="post_ids">
+                          <label for="checkbox{{ $i }}"></label>
                         </div>
+                        <div class="bk-badges">
+                          @if($is_video)<span class="bk-badge bk-badge-red"><i class="fa fa-play"></i> Video</span>@endif
+                          @if($data->book_access=='Paid')<span class="bk-badge bk-badge-amber">Paid</span>@endif
+                          @if($data->book_on_rent)<span class="bk-badge bk-badge-amber">Rent</span>@endif
+                          @if($data->upload_status=='pending')<span class="bk-badge bk-badge-amber">Pending review</span>@endif
+                          @if($data->upload_status=='rejected')<span class="bk-badge bk-badge-red">Rejected</span>@endif
+                        </div>
+                        <a href="{{ url('admin/books/edit/'.$data->id) }}">@include('admin.partials.book_cover', ['book' => $data])</a>
+                      </div>
 
+                      <div class="bk-body">
+                        <a href="{{ url('admin/books/edit/'.$data->id) }}" class="bk-title" title="{{ stripslashes($data->title) }}">{{ stripslashes($data->title) }}</a>
+                        <div class="bk-meta">{{ $cat_name ?: 'No category' }}@if($sub_name) · {{ $sub_name }}@endif</div>
+                        <div class="bk-stats">
+                          <span title="Views"><i class="fa fa-eye"></i> {{ number_format_short(post_views_count($data->id,"Book")) }}</span>
+                          <span title="Rating"><i class="fa fa-star"></i> {{ \App\PostRatings::getPostTotalRatings($data->id,"Book") ?: 0 }}</span>
+                          <span title="Downloads"><i class="fa fa-download"></i> {{ number_format_short(post_download_count($data->id,"Book")) }}</span>
+                        </div>
+                        <div class="bk-actions">
+                          <a href="{{ url('admin/books/edit/'.$data->id) }}" class="bk-btn" data-toggle="tooltip" title="{{trans('words.edit')}}"><i class="fa fa-pencil"></i></a>
+                          <a href="javascript:void(0)" class="bk-btn bk-feature slider_enable_disable {{ $data->featured ? 'is-on' : '' }}" id="slider_id{{$data->id}}" data-id="{{$data->id}}" data-value="{{$data->featured?'false':'true'}}" data-toggle="tooltip" title="{{$data->featured?'Remove from home slider':'Show in home slider'}}"><i class="fa fa-star"></i></a>
+                          <a href="#" class="bk-btn bk-delete data_remove" data-id="{{$data->id}}" data-toggle="tooltip" title="{{trans('words.remove')}}"><i class="fa fa-trash-o"></i></a>
+                          <label class="bk-switch" title="Visible in the app">
+                            <input type="checkbox" name="category_on_off" id="book_enable_disable{{$data->id}}" value="1" data-plugin="switchery" data-color="#16a34a" data-size="small" class="enable_disable" data-id="{{$data->id}}" @if($data->status==1) checked @endif/>
+                            <span>Live</span>
+                          </label>
+                        </div>
+                      </div>
                     </div>
-                   @endforeach      
-
+                  @empty
+                    <div class="bk-empty"><i class="fa fa-book"></i>No books match.</div>
+                  @endforelse
                 </div>
-  
+
                 <nav class="paging_simple_numbers">
                 @include('admin.pagination', ['paginator' => $list]) 
                 </nav>
@@ -264,7 +272,7 @@ $(".slider_enable_disable").on("click",function(e){
             //slider_id
             var s_post_id= '#slider_id'+post_id;
 
-            $(s_post_id).css({'color':res.set_color,'background':'#fff'});
+            $(s_post_id).toggleClass('is-on', res.set_color == 'green');
             $(s_post_id).attr('data-original-title', res.set_title);            
             $(s_post_id).data('value',res.re_set_value);
 
