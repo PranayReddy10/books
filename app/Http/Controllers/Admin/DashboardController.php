@@ -66,10 +66,30 @@ class DashboardController extends MainAdminController
             $users_month = User::where('usertype','User')->where('created_at', '>=', date('Y-m-d', strtotime('-30 days')))->count();
             // Active subscriptions = users whose exp_date is in the future
             $active_subscribers = User::where('usertype','User')->where('exp_date', '>=', time())->count();
-            // Recently updated today (proxy for recent activity; not exact login tracking)
-            $recently_active = User::where('usertype','User')->whereDate('updated_at', date('Y-m-d'))->count();
+            // Signed in today (app or website). Older deployments without the
+            // login columns fall back to accounts touched today.
+            $recently_active = \Illuminate\Support\Facades\Schema::hasColumn('users', 'last_login_at')
+                ? User::where('usertype','User')->whereDate('last_login_at', date('Y-m-d'))->count()
+                : User::where('usertype','User')->whereDate('updated_at', date('Y-m-d'))->count();
+
+            // Accounts still missing what sign-up asks for (mostly Google sign-ins).
+            $profiles_incomplete = UsersController::filteredUsers(['profile' => 'incomplete'])->count();
+
+            // Sign-ups per day for the last 14 days, oldest first, zero-filled.
+            $signup_rows = User::where('usertype','User')
+                ->where('created_at', '>=', date('Y-m-d', strtotime('-13 days')))
+                ->selectRaw('DATE(created_at) as d, COUNT(*) as c')
+                ->groupBy('d')->pluck('c', 'd');
+            $signups_daily = [];
+            for ($i = 13; $i >= 0; $i--) {
+                $day = date('Y-m-d', strtotime("-$i days"));
+                $signups_daily[] = ['label' => date('d M', strtotime($day)), 'count' => (int) ($signup_rows[$day] ?? 0)];
+            }
 
             $transactions = Transactions::count();
+            // Transaction dates are unix timestamps.
+            $revenue_total = (float) Transactions::sum('payment_amount');
+            $revenue_month = (float) Transactions::where('date', '>=', strtotime('-30 days'))->sum('payment_amount');
             $reviews = PostRatings::count();
             $reports = Reports::count();
 
@@ -108,7 +128,7 @@ class DashboardController extends MainAdminController
              
             $page_title = trans('words.dashboard_text')?trans('words.dashboard_text'):'Dashboard';
                 
-            return view('admin.pages.dashboard',compact('page_title','category','sub_category','authors','books','departments_count','colleges_count','books_per_department','users','users_today','users_week','users_month','active_subscribers','recently_active','transactions','reviews','reports','trending_now','latest_books','top_country','latest_review','reports_list','media_total','media_pending','media_approved','media_photos','media_videos','books_pending'));                  
+            return view('admin.pages.dashboard',compact('page_title','category','sub_category','authors','books','departments_count','colleges_count','books_per_department','users','users_today','users_week','users_month','active_subscribers','recently_active','transactions','reviews','reports','trending_now','latest_books','top_country','latest_review','reports_list','media_total','media_pending','media_approved','media_photos','media_videos','books_pending','profiles_incomplete','signups_daily','revenue_total','revenue_month'));                  
         
     }
 	

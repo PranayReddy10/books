@@ -314,6 +314,22 @@ hr{ border-top-color:var(--ad-line); }
 }
 .wall-filter-block .checkbox label::before{ border:1px solid #cfd6e2 !important; }
 
+/* Users list: toolbar, collapsible filter panel, result count */
+.users-toolbar-actions{ display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; }
+.filter-count{
+  display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px;
+  padding:0 6px; border-radius:999px; background:var(--ad-accent); font-size:11.5px;
+}
+.btn .filter-count, .btn-secondary .filter-count{ color:#fff !important; }
+.user-filters{ background:var(--ad-surface-2); border:1px solid var(--ad-line); border-radius:12px; padding:16px; margin:0 0 16px; }
+.user-filters-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:12px 14px; }
+.user-filters-grid label{ display:flex; flex-direction:column; gap:6px; margin:0; font-size:12px !important; color:var(--ad-muted) !important; text-transform:uppercase; letter-spacing:.04em; }
+.user-filters-grid .form-control{ min-height:40px; font-size:13.5px; text-transform:none; letter-spacing:0; }
+.user-filters-actions{ display:flex; gap:8px; margin-top:14px; }
+.user-results{ display:flex; align-items:center; gap:14px; margin:0 0 12px; color:var(--ad-muted); font-size:13px; }
+.user-results b{ color:var(--ad-ink); }
+.user-results a{ color:var(--ad-red) !important; font-weight:600; font-size:12.5px; }
+
 /* ============================================================
    TABLES — every admin list
    ============================================================ */
