@@ -29,7 +29,7 @@ class BooksController extends MainAdminController
           
     }
 
-    public function list()
+    public function list(Request $request)
     { 
  
         if(Auth::User()->usertype!="Admin" AND Auth::User()->usertype!="Sub_Admin")
@@ -41,72 +41,60 @@ class BooksController extends MainAdminController
             
         }
 
-        if(isset($_GET['s']))
-        {
-            $keyword = $_GET['s'];  
-            $list = Books::where("title", "LIKE","%$keyword%")->orderBy('title')->paginate(12);
-
-            $list->appends(\Request::only('s'))->links();
+        // Search, status, category, author and department all combine, and
+        // survive paging. Status values match the chips on the page.
+        $filters = [];
+        foreach (['s', 'filter', 'cat_id', 'author_id', 'department_id'] as $key) {
+            $filters[$key] = trim((string) $request->query($key, ''));
         }
-        else if(isset($_GET['filter']))
-        {
-            
-            if($_GET['filter']=="Slider")
-            {
-                $list = Books::where("featured", "1")->orderBy('id','DESC')->paginate(12);      
-            }
-            else if($_GET['filter']=="Paid")
-            {
-                $list = Books::where("book_access", "Paid")->orderBy('id','DESC')->paginate(12);      
-            }   
-            else if($_GET['filter']=="Free")
-            {
-                $list = Books::where("book_access", "Free")->orderBy('id','DESC')->paginate(12);      
-            }
-            else if($_GET['filter']=="Active")
-            {
-                $list = Books::where("status",1)->orderBy('id','DESC')->paginate(12);      
-            }
-            else if($_GET['filter']=="Inactive")
-            {
-                $list = Books::where("status", 0)->orderBy('id','DESC')->paginate(12);      
-            } 
-            else
-            {
-                $list = Books::orderBy('id','DESC')->paginate(12);      
-            }
-                 
-            $list->appends(request()->input())->links();
-        } 
-        else if(isset($_GET['cat_id']) AND isset($_GET['author_id']))
-        {
-           
-            $cat_id = $_GET['cat_id'];  
-            $author_id = $_GET['author_id']; 
-            
-            $list = Books::when($cat_id, function ($q) use ($cat_id) {
-                return $q->where('cat_id',$cat_id);
-            })             
-            ->when($author_id, function ($q) use ($author_id) {
-                return $q->whereRaw("find_in_set('$author_id',author_ids)");
-            })             
-            ->orderBy('id','DESC')->paginate(12);
-              
-            $list->appends(request()->input())->links();
-        }        
-        else
-        {
-            $list = Books::orderBy('id','DESC')->paginate(12);
 
+        $base = Books::query()
+            ->when($filters['s'] !== '', function ($q) use ($filters) {
+                $q->where('title', 'LIKE', '%' . $filters['s'] . '%');
+            })
+            ->when((int) $filters['cat_id'] > 0, function ($q) use ($filters) {
+                $q->where('cat_id', (int) $filters['cat_id']);
+            })
+            ->when((int) $filters['author_id'] > 0, function ($q) use ($filters) {
+                $q->whereRaw('find_in_set(?, author_ids)', [(int) $filters['author_id']]);
+            })
+            ->when((int) $filters['department_id'] > 0, function ($q) use ($filters) {
+                $q->whereIn('id', \DB::table('book_department')->where('department_id', (int) $filters['department_id'])->select('book_id'));
+            });
+
+        $statuses = [
+            ''         => ['All',            function ($q) { }],
+            'Active'   => ['Live',           function ($q) { $q->where('status', 1); }],
+            'Inactive' => ['Hidden',         function ($q) { $q->where('status', 0); }],
+            'Slider'   => ['In home slider', function ($q) { $q->where('featured', 1); }],
+            'Paid'     => ['Paid',           function ($q) { $q->where('book_access', 'Paid'); }],
+            'Free'     => ['Free',           function ($q) { $q->where('book_access', 'Free'); }],
+            'Pending'  => ['Pending review', function ($q) { $q->where('upload_status', 'pending'); }],
+            'Video'    => ['Videos',         function ($q) { $q->where('content_type', 'video'); }],
+        ];
+        if (!isset($statuses[$filters['filter']])) {
+            $filters['filter'] = '';
         }
+
+        $status_counts = [];
+        foreach ($statuses as $key => $def) {
+            $q = clone $base;
+            $def[1]($q);
+            $status_counts[$key] = ['label' => $def[0], 'count' => $q->count()];
+        }
+
+        $query = clone $base;
+        $statuses[$filters['filter']][1]($query);
+        $list = $query->orderBy('id','DESC')->paginate(20)->withQueryString();
 
         $cat_list = Category::orderBy('category_name')->get();
         $authors_list = Authors::orderBy('name')->get();
+        $department_list = Department::orderBy('department_name')->get(['id','department_name']);
 
         $page_title=trans('words.books_text');
 
           
-        return view('admin.pages.books.list',compact('page_title','list','cat_list','authors_list'));
+        return view('admin.pages.books.list',compact('page_title','list','cat_list','authors_list','department_list','filters','status_counts'));
     }
 
     public function add()    

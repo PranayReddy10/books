@@ -331,39 +331,78 @@ hr{ border-top-color:var(--ad-line); }
 .user-results a{ color:var(--ad-red) !important; font-weight:600; font-size:12.5px; }
 
 /* ============================================================
-   BOOK CARDS (Books list)
+   BOOKS LIST: toolbar, status chips, bulk bar, compact rows
    ============================================================ */
-.bk-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(165px, 1fr)); gap:16px; margin-top:4px; }
-.bk{ background:#fff; border:1px solid var(--ad-line); border-radius:12px; overflow:hidden; display:flex; flex-direction:column; transition:box-shadow .15s ease, border-color .15s ease; }
-.bk:hover{ border-color:#cfd6e2; box-shadow:var(--ad-shadow-lg); }
-.bk-cover{ position:relative; background:var(--ad-surface-2); }
-.bk-cover img, .bk-cover .auto-cover{ width:100%; height:auto !important; aspect-ratio:4 / 5; border-radius:0 !important; }
-.bk-cover img{ display:block; object-fit:cover; }
-.bk-cover .auto-cover{ display:flex; }
-.bk-cover .auto-cover-inner{ padding:30px 14px 14px; }
-.bk-cover .auto-cover-title{ font-size:15px; -webkit-line-clamp:4; }
-.bk-check{ position:absolute; left:8px; top:8px; z-index:2; margin:0 !important; }
-.bk-badges{ position:absolute; right:8px; top:8px; z-index:2; display:flex; flex-direction:column; align-items:flex-end; gap:4px; }
-.bk-badge{ font-size:10.5px; font-weight:700; letter-spacing:.02em; padding:3px 8px; border-radius:999px; background:#fff; color:var(--ad-ink-2); box-shadow:0 1px 3px rgba(15,23,42,.18); }
-.bk-badge i{ font-size:9px; }
-.bk-badge-red{ color:var(--ad-red); }
-.bk-badge-amber{ color:var(--ad-amber); }
-.bk-body{ padding:12px 12px 10px; display:flex; flex-direction:column; gap:6px; flex:1; }
-.content-page .bk-title{ font-weight:700; color:var(--ad-ink) !important; font-size:14px; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:36px; }
-.content-page .bk-title:hover{ color:var(--ad-accent) !important; }
-.content-page .bk-meta{ font-size:12px; color:var(--ad-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.bk-stats{ display:flex; gap:12px; font-size:12px; color:var(--ad-muted); }
-.content-page .bk-stats span{ color:var(--ad-muted); }
-.bk-stats i{ color:var(--ad-faint); margin-right:2px; }
-.bk-actions{ display:flex; align-items:center; gap:6px; margin-top:auto; padding-top:8px; border-top:1px solid var(--ad-line-2); }
-.content-page .bk-btn{ width:30px; height:30px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; background:var(--ad-surface-2); color:var(--ad-ink-2) !important; font-size:13px; border:1px solid var(--ad-line); }
-.content-page .bk-btn:hover{ background:var(--ad-accent-soft); color:var(--ad-accent) !important; border-color:#cddcff; }
-.content-page .bk-delete:hover{ background:var(--ad-red-soft); color:var(--ad-red) !important; border-color:#f6c6c6; }
-.content-page .bk-feature.is-on{ background:var(--ad-amber-soft); color:var(--ad-amber) !important; border-color:#f3dbb0; }
-.bk-switch{ margin:0 0 0 auto !important; display:inline-flex; align-items:center; gap:6px; cursor:pointer; }
-.content-page .bk-switch span{ font-size:11.5px !important; font-weight:600; color:var(--ad-muted) !important; }
-.bk-empty{ grid-column:1 / -1; text-align:center; color:var(--ad-muted); padding:48px 10px; }
-.bk-empty i{ display:block; font-size:26px; color:var(--ad-faint); margin-bottom:8px; }
+.bl-toolbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
+.bl-toolbar .bl-search{ flex:1 1 260px; min-width:220px; }
+.bl-toolbar select.form-control{ flex:0 1 190px; width:auto; min-width:150px; }
+.bl-toolbar .bl-add{ margin-left:auto; }
+.bl-chips{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
+.content-page .bl-chip{ display:inline-flex; align-items:center; gap:7px; padding:6px 12px; border-radius:999px; border:1px solid var(--ad-line); background:#fff; color:var(--ad-ink-2) !important; font-size:13px; font-weight:600; }
+.content-page .bl-chip:hover{ border-color:#cfd6e2; }
+.bl-chip span{ font-size:11.5px; color:var(--ad-muted); font-weight:600; }
+.content-page .bl-chip.is-active{ background:var(--ad-ink); border-color:var(--ad-ink); color:#fff !important; }
+.bl-chip.is-active span{ color:rgba(255,255,255,.7); }
+.bl-chip.is-warn span{ color:var(--ad-amber); }
+.content-page .bl-clear{ font-size:12.5px; font-weight:600; color:var(--ad-red) !important; margin-left:4px; }
+
+.bl-bulk{ display:none; align-items:center; gap:8px; flex-wrap:wrap; padding:10px 14px; margin-bottom:12px; border-radius:10px; background:var(--ad-accent-soft); border:1px solid #cddcff; }
+.bl-bulk.is-open{ display:flex; }
+.bl-bulk > span{ font-size:13px; color:var(--ad-ink-2); margin-right:6px; }
+.bl-bulk .bl-danger, .bl-bulk .bl-danger *{ color:var(--ad-red) !important; }
+
+.content-page .bl-table th.bl-check-col, .content-page .bl-table td.bl-check-col{ width:36px; padding-right:0 !important; }
+/* Fits without sideways scrolling, so the actions column need not be pinned */
+.content-page .bl-table tr > td:last-child:has(.btn),
+.content-page .bl-table:has(tbody td:last-child .btn) thead th:last-child{ position:static; box-shadow:none; }
+.bl-table .checkbox{ margin:0; padding-left:20px; min-height:18px; }
+.bl-table .checkbox label{ min-height:18px; }
+.bl-book{ display:flex; align-items:center; gap:14px; min-width:240px; }
+.content-page .bl-table td.bl-dept{ white-space:normal; min-width:140px; max-width:220px; }
+.bl-stat{ margin-left:10px; color:var(--ad-muted); white-space:nowrap; }
+.bl-stat i{ color:var(--ad-faint); font-size:11px; }
+.bl-stat .fa-star{ color:#f59e0b; }
+.bl-table .checkbox label::before{ border:1.5px solid #c3cbd8 !important; background:#fff !important; border-radius:4px !important; }
+.bl-table .checkbox input:checked + label::before{ background:var(--ad-accent) !important; border-color:var(--ad-accent) !important; }
+.bl-table .checkbox input:checked + label::after{ color:#fff !important; }
+.bl-cover{ flex:0 0 44px; }
+.bl-cover img, .bl-cover .auto-cover{ width:44px; height:58px !important; border-radius:6px !important; object-fit:cover; box-shadow:0 1px 3px rgba(15,23,42,.2); display:flex; }
+.bl-cover .auto-cover-inner{ display:none; }
+.bl-info{ min-width:0; }
+.content-page .bl-title{ display:block; font-weight:700; color:var(--ad-ink) !important; font-size:14px; max-width:320px; overflow:hidden; text-overflow:ellipsis; }
+.content-page .bl-title:hover{ color:var(--ad-accent) !important; }
+.bl-meta{ font-size:12.5px; color:var(--ad-muted); }
+.bl-tags{ display:flex; gap:4px; flex-wrap:wrap; margin-top:4px; }
+.bl-tags:empty{ display:none; }
+.bl-tags .badge{ font-size:10.5px !important; padding:2px 8px !important; }
+.bl-dept-inline{ display:none; }
+.bl-dept-inline i{ color:var(--ad-faint); margin-right:3px; }
+@media (max-width: 1199px){
+  .content-page .bl-table .bl-dept{ display:none; }
+  .bl-dept-inline{ display:block; }
+  .bl-book{ min-width:190px; }
+  .content-page .bl-title{ max-width:230px; }
+  .content-page .bl-table td, .content-page .bl-table th{ padding-left:10px !important; padding-right:10px !important; }
+}
+@media (max-width: 767px){
+  .bl-toolbar select.form-control{ flex:1 1 100%; }
+  .bl-toolbar .bl-add{ margin-left:0; flex:1 1 100%; }
+  body .content-page .card-box .bl-table thead{ display:none; }
+  body .content-page .card-box .bl-table, .content-page .bl-table tbody{ display:block; }
+  body .content-page .card-box .bl-table tr{ display:grid; grid-template-columns:26px auto auto 1fr; align-items:center; gap:10px 12px; padding:12px; border-bottom:1px solid var(--ad-line-2); }
+  body .content-page .card-box .bl-table > tbody > tr > td{ display:block; border:0 !important; padding:0 !important; position:static !important; box-shadow:none !important; background:transparent !important; }
+  body .content-page .card-box .bl-table td.bl-check-col{ width:auto; grid-column:1; grid-row:1; }
+  body .content-page .card-box .bl-table td:nth-child(2){ grid-column:2 / -1; grid-row:1; min-width:0; }
+  body .content-page .card-box .bl-table td.bl-dept{ display:none; }
+  body .content-page .card-box .bl-table td:nth-child(4){ grid-column:2; grid-row:2; }
+  body .content-page .card-box .bl-table td:nth-child(5){ grid-column:3; grid-row:2; }
+  body .content-page .card-box .bl-table td:last-child{ grid-column:4; grid-row:2; justify-self:end; }
+  body .content-page .card-box .bl-table td[colspan]{ grid-column:1 / -1; }
+  body .content-page .bl-book{ min-width:0; }
+  body .content-page .bl-title{ max-width:100%; white-space:normal; }
+  body .content-page .card-box .bl-table td:empty{ display:none; }
+}
+.content-page .table td .bl-feature.is-on{ background:var(--ad-amber-soft) !important; color:var(--ad-amber) !important; }
 
 /* ============================================================
    BOOK FORM (Add / Edit book): sections in two columns
