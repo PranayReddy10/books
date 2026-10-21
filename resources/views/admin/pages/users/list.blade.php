@@ -10,23 +10,103 @@
             <div class="col-12">
               <div class="card-box table-responsive">
 
-                <div class="row">                  
-                  <div class="col-md-3">
-                     {!! Form::open(array('url' => 'admin/users','class'=>'app-search','id'=>'search','role'=>'form','method'=>'get')) !!}   
-                      <input type="text" name="s" placeholder="{{trans('words.search_by_name_email')}}" class="form-control">
+                @php
+                  $active_filters = array_filter(\Illuminate\Support\Arr::except($filters, ['s']), 'strlen');
+                  $sel = function ($key, $value) use ($filters) { return (string) $filters[$key] === (string) $value ? 'selected' : ''; };
+                @endphp
+
+                <div class="row">
+                  <div class="col-md-5">
+                    <form method="get" action="{{ URL::to('admin/users') }}" class="app-search" role="form">
+                      @foreach($active_filters as $k => $v)<input type="hidden" name="{{ $k }}" value="{{ $v }}">@endforeach
+                      <input type="text" name="s" value="{{ $filters['s'] }}" placeholder="Search name, email, phone, hall ticket…" class="form-control">
                       <button type="submit"><i class="fa fa-search"></i></button>
-                    {!! Form::close() !!}
-                  </div>             
-                <div class="col-md-3">
-                  <a href="{{URL::to('admin/users/add')}}" class="btn btn-success btn-md waves-effect waves-light m-b-20 mt-2" data-toggle="tooltip" title="{{trans('words.add_user')}}"><i class="fa fa-plus"></i> {{trans('words.add_user')}}</a>
-                </div>
-                <div class="col-sm-3">
-                      
+                    </form>
                   </div>
-                <div class="col-md-3">
-                  <a href="{{URL::to('admin/users/export')}}" class="btn btn-info btn-md waves-effect waves-light m-b-20 mt-2 pull-right" data-toggle="tooltip" title="{{trans('words.export_user')}}"><i class="fa fa-file-excel-o"></i> {{trans('words.export_user')}}</a>
+                  <div class="col-md-7 users-toolbar-actions">
+                    <button type="button" class="btn btn-secondary" data-toggle="collapse" data-target="#userFilters" aria-expanded="{{ count($active_filters) ? 'true' : 'false' }}">
+                      <i class="fa fa-sliders"></i> Filters @if(count($active_filters))<span class="filter-count">{{ count($active_filters) }}</span>@endif
+                    </button>
+                    <a href="{{ URL::to('admin/users/export').(count(array_filter($filters,'strlen')) ? '?'.http_build_query(array_filter($filters,'strlen')) : '') }}" class="btn btn-info" title="{{trans('words.export_user')}}"><i class="fa fa-file-excel-o"></i> {{ count(array_filter($filters,'strlen')) ? 'Export filtered' : trans('words.export_user') }}</a>
+                    <a href="{{URL::to('admin/users/add')}}" class="btn btn-success"><i class="fa fa-plus"></i> {{trans('words.add_user')}}</a>
+                  </div>
                 </div>
-              </div>
+
+                <form method="get" action="{{ URL::to('admin/users') }}" id="userFilters" class="collapse user-filters {{ count($active_filters) ? 'show' : '' }}">
+                  @if($filters['s'] !== '')<input type="hidden" name="s" value="{{ $filters['s'] }}">@endif
+                  <div class="user-filters-grid">
+                    <label>University
+                      <select name="university" class="form-control">
+                        <option value="">All</option>
+                        @foreach($universities as $u)<option value="{{ $u }}" {{ $sel('university', $u) }}>{{ $u }}</option>@endforeach
+                      </select>
+                    </label>
+                    <label>Department
+                      <select name="department_id" class="form-control">
+                        <option value="">All</option>
+                        @foreach($departments as $d)<option value="{{ $d->id }}" {{ $sel('department_id', $d->id) }}>{{ stripslashes($d->department_name) }}</option>@endforeach
+                      </select>
+                    </label>
+                    <label>College
+                      <select name="college" class="form-control">
+                        <option value="">All</option>
+                        @foreach($colleges as $c)<option value="{{ $c }}" {{ $sel('college', $c) }}>{{ $c }}</option>@endforeach
+                      </select>
+                    </label>
+                    <label>Gender
+                      <select name="gender" class="form-control">
+                        <option value="">All</option>
+                        @foreach(['Male','Female','Other'] as $g)<option value="{{ $g }}" {{ $sel('gender', $g) }}>{{ $g }}</option>@endforeach
+                      </select>
+                    </label>
+                    <label>Status
+                      <select name="status" class="form-control">
+                        <option value="">All</option>
+                        <option value="active" {{ $sel('status','active') }}>Active</option>
+                        <option value="inactive" {{ $sel('status','inactive') }}>Inactive</option>
+                      </select>
+                    </label>
+                    <label>Verified
+                      <select name="verified" class="form-control">
+                        <option value="">All</option>
+                        <option value="yes" {{ $sel('verified','yes') }}>Verified</option>
+                        <option value="no" {{ $sel('verified','no') }}>Not verified</option>
+                      </select>
+                    </label>
+                    <label>Signed up with
+                      <select name="signup" class="form-control">
+                        <option value="">All</option>
+                        <option value="google" {{ $sel('signup','google') }}>Google</option>
+                        <option value="email" {{ $sel('signup','email') }}>Email</option>
+                      </select>
+                    </label>
+                    <label>Profile
+                      <select name="profile" class="form-control">
+                        <option value="">All</option>
+                        <option value="complete" {{ $sel('profile','complete') }}>Complete</option>
+                        <option value="incomplete" {{ $sel('profile','incomplete') }}>Missing details</option>
+                      </select>
+                    </label>
+                    <label>Joined
+                      <select name="joined" class="form-control">
+                        <option value="">Any time</option>
+                        <option value="today" {{ $sel('joined','today') }}>Today</option>
+                        <option value="7" {{ $sel('joined','7') }}>Last 7 days</option>
+                        <option value="30" {{ $sel('joined','30') }}>Last 30 days</option>
+                        <option value="90" {{ $sel('joined','90') }}>Last 90 days</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div class="user-filters-actions">
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-check"></i> Apply</button>
+                    @if(count($active_filters))<a href="{{ URL::to('admin/users').($filters['s'] !== '' ? '?s='.urlencode($filters['s']) : '') }}" class="btn btn-secondary">Reset</a>@endif
+                  </div>
+                </form>
+
+                <div class="user-results">
+                  <span><b>{{ number_format($user_list->total()) }}</b> {{ $user_list->total() == 1 ? 'student' : 'students' }}@if(count(array_filter($filters,'strlen'))) match @endif</span>
+                  @if(count(array_filter($filters,'strlen')))<a href="{{ URL::to('admin/users') }}"><i class="fa fa-times"></i> Clear all</a>@endif
+                </div>
 
                 @if(Session::has('flash_message'))
                     <div class="alert alert-success">
@@ -52,6 +132,9 @@
                     </tr>
                   </thead>
                   <tbody>
+                   @if($user_list->isEmpty())
+                    <tr><td colspan="10">No students match these filters.</td></tr>
+                   @endif
                    @foreach($user_list as $i => $user_data)
                     <tr id="post_id_{{$user_data->id}}">
                       <td><a href="{{ url('admin/users/history/'.$user_data->id) }}" data-toggle="tooltip" title="User History">{{ $user_data->name }}</a>@if($user_data->username)<br><small class="text-muted">&#64;{{ $user_data->username }}</small>@endif</td>
@@ -63,7 +146,8 @@
                       <td>{{ $user_data->college ?: '-' }}</td>
                       <td>{{ $user_data->gender ?: '-' }}</td>
                       <td>@if($user_data->status==1)<span class="badge badge-success">{{trans('words.active')}}</span> @else<span class="badge badge-danger">{{trans('words.inactive')}}</span>@endif
-                      @if(isset($user_data->is_verified) && $user_data->is_verified)<br><span class="badge badge-info" style="margin-top:4px;"><i class="fa fa-check-circle"></i> Verified</span>@endif</td>
+                      @if(isset($user_data->is_verified) && $user_data->is_verified)<br><span class="badge badge-info" style="margin-top:4px;"><i class="fa fa-check-circle"></i> Verified</span>@endif
+                      @if(!$user_data->phone || !$user_data->gender || !$user_data->university || !$user_data->department_id || !$user_data->college)<br><span class="badge badge-warning" style="margin-top:4px;" title="Missing phone, gender or college details">Incomplete</span>@endif</td>
                                              
                       <td>
                        

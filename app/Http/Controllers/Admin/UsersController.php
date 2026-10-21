@@ -34,7 +34,7 @@ class UsersController extends MainAdminController
 		 parent::__construct();
           
     }
-    public function list()    { 
+    public function list(Request $request)    { 
          
         if(Auth::User()->usertype!="Admin" AND Auth::User()->usertype!="Sub_Admin")
         {
@@ -47,22 +47,84 @@ class UsersController extends MainAdminController
 
         $page_title=trans('words.users');
 
-        if(isset($_GET['s']))
-        {
-            $keyword = $_GET['s'];  
-            $user_list = User::where("usertype", "=","User")->where("name", "LIKE","%$keyword%")->orwhere("email", "LIKE","%$keyword%")->orderBy('id','DESC')->paginate(10);
+        $filters = self::userFilters($request);
+        $user_list = self::filteredUsers($filters)->orderBy('id','DESC')->paginate(10);
+        $user_list->appends(array_filter($filters, 'strlen'));
 
-            $user_list->appends(\Request::only('s'))->links();
-        }         
-        else
-        {
-          
-            $user_list = User::where('usertype', '=', 'User')->orderBy('id','DESC')->paginate(10);
-        }
-         
-        return view('admin.pages.users.list',compact('page_title','user_list'));
+        $universities = University::where('status',1)->orderBy('university_name')->pluck('university_name');
+        $departments = Department::where('status',1)->orderBy('department_name')->get(['id','department_name']);
+        $colleges = College::where('status',1)->orderBy('college_name')->pluck('college_name');
+
+        return view('admin.pages.users.list',compact('page_title','user_list','filters','universities','departments','colleges'));
     } 
-     
+
+    /** The filters the users list understands, read from the query string. */
+    public static function userFilters(Request $request)
+    {
+        $keys = ['s','university','department_id','college','gender','status','verified','signup','profile','joined'];
+        $filters = [];
+        foreach ($keys as $key) {
+            $filters[$key] = trim((string) $request->query($key, ''));
+        }
+        return $filters;
+    }
+
+    /**
+     * Students matching the list filters. Shared with the export, so the file
+     * holds exactly the users the admin is looking at.
+     */
+    public static function filteredUsers(array $filters)
+    {
+        $query = User::where('usertype', 'User');
+        $f = function ($key) use ($filters) { return isset($filters[$key]) ? $filters[$key] : ''; };
+
+        if ($f('s') !== '') {
+            $keyword = $f('s');
+            // Grouped, so the OR cannot pull admins into the list.
+            $query->where(function ($q) use ($keyword) {
+                $q->where('name', 'LIKE', "%$keyword%")
+                  ->orWhere('email', 'LIKE', "%$keyword%")
+                  ->orWhere('phone', 'LIKE', "%$keyword%")
+                  ->orWhere('rollnumber', 'LIKE', "%$keyword%")
+                  ->orWhere('username', 'LIKE', "%$keyword%");
+            });
+        }
+        if ($f('university') !== '')    { $query->where('university', $f('university')); }
+        if ($f('department_id') !== '') { $query->where('department_id', (int) $f('department_id')); }
+        if ($f('college') !== '')       { $query->where('college', $f('college')); }
+        if ($f('gender') !== '')        { $query->where('gender', $f('gender')); }
+        if ($f('status') === 'active')   { $query->where('status', 1); }
+        if ($f('status') === 'inactive') { $query->where('status', 0); }
+        if ($f('verified') === 'yes')    { $query->where('is_verified', 1); }
+        if ($f('verified') === 'no')     { $query->where('is_verified', 0); }
+        if ($f('signup') === 'google')   { $query->where('social_login_type', 'google'); }
+        if ($f('signup') === 'email')    {
+            $query->where(function ($q) { $q->whereNull('social_login_type')->orWhere('social_login_type', ''); });
+        }
+
+        // Same rule the app uses to send Google users to "complete profile".
+        $required = ['phone', 'gender', 'university', 'department_id', 'college'];
+        if ($f('profile') === 'complete') {
+            foreach ($required as $col) {
+                $query->whereNotNull($col)->where($col, '!=', '');
+            }
+        }
+        if ($f('profile') === 'incomplete') {
+            $query->where(function ($q) use ($required) {
+                foreach ($required as $col) {
+                    $q->orWhereNull($col)->orWhere($col, '');
+                }
+            });
+        }
+
+        $since = ['today' => 'today', '7' => '-7 days', '30' => '-30 days', '90' => '-90 days'];
+        if (isset($since[$f('joined')])) {
+            $query->where('created_at', '>=', date('Y-m-d H:i:s', strtotime($since[$f('joined')])));
+        }
+
+        return $query;
+    }
+
     public function add()    { 
         
         if(Auth::User()->usertype!="Admin" AND Auth::User()->usertype!="Sub_Admin")
@@ -290,7 +352,7 @@ class UsersController extends MainAdminController
 
           $user_id=$user->id;
 
-          $transactions_list = Transactions::where('user_id',$user_id)->orderBy('id','DESC')->paginate(10);
+          $transactions_list = Transactions::where('user_id',$user_id)->orderBy('id','DESC')->paginate(10)->fragment('tab-payments');
 
           // Books this user uploaded (any status)
           $uploaded_books = \App\Books::where('uploaded_by',$user_id)->orderBy('id','DESC')->get();
@@ -302,7 +364,17 @@ class UsersController extends MainAdminController
           $reading_history = \App\ContinueRead::where('user_id',$user_id)->orderBy('id','DESC')->get();
            
            
-          return view('admin.pages.users.history',compact('page_title','user','transactions_list','uploaded_books','uploaded_posts','reading_history'));
+          $total_spent = (float) Transactions::where('user_id',$user_id)->sum('payment_amount');
+          $favourites_count = Favourite::where('user_id',$user_id)->count();
+          $reviews_count = PostRatings::where('user_id',$user_id)->count();
+
+          // What sign-up requires that this account still lacks.
+          $missing = [];
+          foreach (['phone' => 'Phone', 'gender' => 'Gender', 'university' => 'University', 'department_id' => 'Department', 'college' => 'College'] as $col => $label) {
+              if (trim((string) $user->$col) === '') { $missing[] = $label; }
+          }
+
+          return view('admin.pages.users.history',compact('page_title','user','transactions_list','uploaded_books','uploaded_posts','reading_history','total_spent','favourites_count','reviews_count','missing'));
         
     }
 
@@ -317,7 +389,7 @@ class UsersController extends MainAdminController
             
         }
 
-          return Excel::download(new UsersExport, 'users-'.date('Y-m-d').'.xlsx');
+          return Excel::download(new UsersExport(self::userFilters(request())), 'users-'.date('Y-m-d').'.xlsx');
 
     }
     

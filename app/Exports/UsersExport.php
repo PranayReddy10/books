@@ -27,16 +27,19 @@ class UsersExport implements FromQuery, WithHeadings, ShouldAutoSize, WithEvents
     /** Department and plan names by id, looked up once instead of per row. */
     private $departments;
     private $plans;
+    /** The users-list filters in effect, so the file matches what is on screen. */
+    private $filters;
 
-    public function __construct()
+    public function __construct(array $filters = [])
     {
+        $this->filters = $filters;
         $this->departments = Department::pluck('department_name', 'id')->all();
         $this->plans = SubscriptionPlan::pluck('plan_name', 'id')->all();
     }
 
     public function query()
     {
-        return User::query()->where('usertype', 'User')->orderBy('id', 'DESC');
+        return \App\Http\Controllers\Admin\UsersController::filteredUsers($this->filters)->orderBy('id', 'DESC');
     }
 
     public function map($user): array
