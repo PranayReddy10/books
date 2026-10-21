@@ -13,12 +13,24 @@
                 <div class="row">
                  <div class="col-md-3">
                      {!! Form::open(array('url' => 'admin/category','class'=>'app-search','id'=>'search','role'=>'form','method'=>'get')) !!}   
-                      <input type="text" name="s" placeholder="{{trans('words.search_by_title')}}" class="form-control">
+                      <input type="text" name="s" value="{{ request('s') }}" placeholder="{{trans('words.search_by_title')}}" class="form-control">
+                      @if(request('university') !== null)<input type="hidden" name="university" value="{{ request('university') }}">@endif
                       <button type="submit"><i class="fa fa-search"></i></button>
                     {!! Form::close() !!}
                 </div>
                 <div class="col-sm-6">
-                  &nbsp;
+                  @if(\Schema::hasColumn('categories', 'university_id'))
+                  <form method="get" action="{{ URL::to('admin/category') }}" class="mt-2">
+                    @if(request('s'))<input type="hidden" name="s" value="{{ request('s') }}">@endif
+                    <select name="university" class="form-control" style="max-width:280px" onchange="this.form.submit()">
+                      <option value="">All categories</option>
+                      <option value="none" @if(request('university') === 'none') selected @endif>For all universities</option>
+                      @foreach(\App\University::orderBy('university_name')->get() as $uni)
+                        <option value="{{ $uni->id }}" @if((string) request('university') === (string) $uni->id) selected @endif>{{ $uni->university_name }}</option>
+                      @endforeach
+                    </select>
+                  </form>
+                  @endif
                 </div>   
 
                 <div class="col-md-3">
@@ -46,6 +58,10 @@
 
                             <div class="card-body p-3">
                                 <h4 class="card-title mb-3">{{ stripslashes($data->category_name) }}</h4>
+                                @if(\Schema::hasColumn('categories', 'university_id'))
+                                  @if(!empty($data->university_id))<span class="badge badge-info mb-2"><i class="fa fa-university"></i> {{ \App\University::where('id', $data->university_id)->value('university_name') }}</span>
+                                  @else<span class="badge badge-secondary mb-2">All universities</span>@endif
+                                @endif
                                 
                                 <a href="{{ url('admin/category/edit/'.$data->id) }}" class="btn btn-icon waves-effect waves-light btn-success m-r-5" data-toggle="tooltip" title="{{trans('words.edit')}}"> <i class="fa fa-edit"></i> </a>
 

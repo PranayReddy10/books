@@ -32,18 +32,23 @@ class CategoryController extends MainAdminController
             
         }
 
-        if(isset($_GET['s']))
-        {
-            $keyword = $_GET['s'];  
-            $list = Category::where("category_name", "LIKE","%$keyword%")->orderBy('category_name')->paginate(10);
-
-            $list->appends(\Request::only('s'))->links();
-        }         
-        else
-        {
-            $list = Category::orderBy('id','DESC')->paginate(10);
-
+        // Search by name and/or filter by university ("none" = all-university categories).
+        $query = Category::query();
+        if (!empty($_GET['s'])) {
+            $query->where("category_name", "LIKE", "%".$_GET['s']."%")->orderBy('category_name');
+        } else {
+            $query->orderBy('id', 'DESC');
         }
+        $university = isset($_GET['university']) ? $_GET['university'] : '';
+        if ($university !== '' && \Schema::hasColumn('categories', 'university_id')) {
+            if ($university === 'none') {
+                $query->whereNull('university_id');
+            } else {
+                $query->where('university_id', (int) $university);
+            }
+        }
+        $list = $query->paginate(10);
+        $list->appends(\Request::only('s', 'university'));
 
         $page_title=trans('words.categories_text');
          
@@ -125,6 +130,9 @@ class CategoryController extends MainAdminController
          
  
          $data_obj->category_name = addslashes($inputs['category_name']);
+         if (\Schema::hasColumn('categories', 'university_id')) {
+             $data_obj->university_id = !empty($inputs['university_id']) ? (int) $inputs['university_id'] : null;
+         }
          $data_obj->category_image = $inputs['category_image'];       
 
          $data_obj->status = $inputs['status']; 

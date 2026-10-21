@@ -34,6 +34,7 @@
                     <tr>
                       <th>#</th>
                       <th>College Name</th>
+                      <th>Code</th>
                       <th>{{trans('words.status')}}</th>
                       <th>{{trans('words.action')}}</th>
                     </tr>
@@ -43,6 +44,7 @@
                     <tr id="row_id_{{$data->id}}">
                       <td>{{ $data->id }}</td>
                       <td>{{ stripslashes($data->college_name) }}</td>
+                      <td>{{ $data->college_code ?: '—' }}</td>
                       <td>
                         @if($data->status==1)<span class="badge badge-success">{{trans('words.active')}}</span>
                         @else<span class="badge badge-danger">{{trans('words.inactive')}}</span>@endif

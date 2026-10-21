@@ -19,17 +19,40 @@ class Books extends Model
 	}
 
 	/**
-	 * Books a student of this university may see: books tagged with one of the
-	 * university's departments, plus books that are not tied to any university
-	 * (no department at all, or only departments without a university). A null
-	 * university leaves the query alone.
+	 * Books a student of this university may see: not in a category set to
+	 * another university, and either tagged with one of the university's
+	 * departments or not tied to any university (no department at all, or only
+	 * departments without a university). A null university leaves the query
+	 * alone.
 	 */
+	/** Whether categories.university_id exists yet (it is added by SQL on live). */
+	public static function categoriesHaveUniversity()
+	{
+		static $has = null;
+		if ($has === null) {
+			$has = \Illuminate\Support\Facades\Schema::hasColumn('categories', 'university_id');
+		}
+		return $has;
+	}
+
 	public function scopeForUniversity($query, $universityId)
 	{
 		if (empty($universityId)) {
 			return $query;
 		}
 		$universityId = (int) $universityId;
+
+		// A category set to another university hides all its books.
+		if (self::categoriesHaveUniversity()) {
+			$query->where(function ($q) use ($universityId) {
+				// NOT IN would drop books with no category, so let those through.
+				$q->whereNull('cat_id')->orWhereNotIn('cat_id', function ($c) use ($universityId) {
+					$c->select('id')->from('categories')
+						->whereNotNull('university_id')
+						->where('university_id', '!=', $universityId);
+				});
+			});
+		}
 
 		return $query->whereNotExists(function ($other) use ($universityId) {
 			// Hidden only when every department it is tagged with belongs to

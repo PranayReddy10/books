@@ -26,6 +26,14 @@
                   </div>
 
                   <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">College Code</label>
+                    <div class="col-sm-8">
+                      <input type="text" name="college_code" maxlength="10" value="{{ isset($info->college_code) ? $info->college_code : null }}" class="form-control" placeholder="e.g. R0">
+                      <small class="form-text text-muted">The university's code for this college. For JNTUH it is the two characters after the year in a hall ticket (22<b>R0</b>1A0501). Used to fill in a student's college from their hall ticket.</small>
+                    </div>
+                  </div>
+
+                  <div class="form-group row">
                     <label class="col-sm-3 col-form-label">{{trans('words.status')}}</label>
                       <div class="col-sm-8">
                             <select class="form-control" name="status">

@@ -27,7 +27,12 @@ class CollegeController extends MainAdminController
 
         if (isset($_GET['s'])) {
             $keyword = $_GET['s'];
-            $list = College::where("college_name", "LIKE", "%$keyword%")->orderBy('college_name')->paginate(10);
+            $list = College::where(function ($q) use ($keyword) {
+                $q->where("college_name", "LIKE", "%$keyword%");
+                if (\Schema::hasColumn('colleges', 'college_code')) {
+                    $q->orWhere("college_code", strtoupper($keyword));
+                }
+            })->orderBy('college_name')->paginate(10);
             $list->appends(\Request::only('s'))->links();
         } else {
             $list = College::orderBy('id', 'DESC')->paginate(10);
@@ -86,6 +91,10 @@ class CollegeController extends MainAdminController
         }
 
         $data_obj->college_name = addslashes($inputs['college_name']);
+        if (\Schema::hasColumn('colleges', 'college_code')) {
+            $code = strtoupper(trim(isset($inputs['college_code']) ? $inputs['college_code'] : ''));
+            $data_obj->college_code = $code !== '' ? $code : null;
+        }
         $data_obj->status = $inputs['status'];
         $data_obj->save();
 
