@@ -31,7 +31,8 @@
      <link rel="preconnect" href="https://fonts.googleapis.com">
      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-     <link href="{{ URL::asset('admin_assets/css/admin-light.css') }}?v=16" rel="stylesheet" type="text/css" />
+     {{-- Versioned by the file's change time, so browsers fetch it again after every deploy. --}}
+     <link href="{{ URL::asset('admin_assets/css/admin-light.css') }}?v={{ @filemtime(public_path('admin_assets/css/admin-light.css')) ?: 17 }}" rel="stylesheet" type="text/css" />
 
      <script src="{{ URL::asset('admin_assets/js/modernizr.min.js') }}"></script>
      
