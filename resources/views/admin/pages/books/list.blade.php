@@ -562,7 +562,8 @@ $("#data_disable_selected").click(function () {
   $(document).on('change', '.post_ids', refreshBulk);
 
   // Category / department / author pick applies straight away.
-  $('#bookFilters .bl-auto').on('change', function () { $('#bookFilters').submit(); });
+  // requestSubmit fires a real submit event, so the handler below runs whichever jQuery copy bound it.
+  $('#bookFilters .bl-auto').on('change', function () { document.getElementById('bookFilters').requestSubmit(); });
   // Leave empty fields out of the address so links stay short.
   $('#bookFilters').on('submit', function () { $(this).find('input, select').filter(function () { return !this.value; }).prop('disabled', true); });
 
