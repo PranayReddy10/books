@@ -93,7 +93,7 @@ class ResultsController extends MainAdminController
             }
         }
         $page_title = 'View Result';
-        return view('admin.pages.results.view', compact('page_title', 'result', 'sems', 'cards', 'universities', 'users'));
+        return view('admin.pages.results.view', compact('page_title', 'result', 'sems', 'cards', 'universities', 'users', 'linkedUser'));
     }
 
     /** Add form. */
@@ -524,8 +524,9 @@ class ResultsController extends MainAdminController
 
     public function cards()
     {
-        $list = ReportCard::orderBy('id', 'DESC')->paginate(20);
+        $list = ReportCard::orderBy('id', 'DESC')->paginate(24);
+        $results = Result::whereIn('id', $list->pluck('result_id'))->get()->keyBy('id');
         $page_title = 'Report Cards';
-        return view('admin.pages.results.cards', compact('page_title', 'list'));
+        return view('admin.pages.results.cards', compact('page_title', 'list', 'results'));
     }
 }

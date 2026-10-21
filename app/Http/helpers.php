@@ -1540,10 +1540,210 @@ if (!function_exists('jntuh_compute_sgpa')) {
     }
 }
 
+if (!function_exists('render_result_report_card')) {
+    /**
+     * Draw the report card for a Result as an image (Intervention, GD).
+     * Kept apart from the upload so it can be previewed or tested locally.
+     *
+     * Layout: brand header with a verified badge, student details, headline
+     * tiles (CGPA, credits, backlogs, semesters), one table per semester with
+     * coloured grades, and a footer saying where the marks came from. A faint
+     * diagonal watermark stays baked into the pixels.
+     *
+     * @param  \App\Result $result
+     * @return \Intervention\Image\Image
+     */
+    function render_result_report_card($result)
+    {
+        $result->load('semesters');
+
+        $W = 1080; $pad = 56; $right = $W - $pad;
+        $verified = (int) $result->verified === 1;
+
+        $bold = public_path('admin_assets/fonts/cover-font.ttf');
+        $regular = public_path('admin_assets/fonts/DejaVuSans.ttf');
+        if (!file_exists($regular)) { $regular = $bold; }
+        $hasFont = file_exists($bold);
+
+        $ink = '#0f172a'; $ink2 = '#334155'; $muted = '#64748b'; $line = '#e2e8f0';
+        $navy = '#0f172a'; $blue = '#2563eb';
+
+        $semData = array();
+        $rowH = 46;
+        $H = 470; // header + student block + tiles
+        foreach ($result->semesters as $sem) {
+            $subs = $sem->subjects()->get();
+            $semData[] = array('sem' => $sem, 'subs' => $subs);
+            $H += 66 + 36 + max(count($subs), 1) * $rowH + 30;
+        }
+        if (empty($semData)) { $H += 80; }
+        $H += 150; // footer
+        $img = \Image::canvas($W, $H, '#ffffff');
+
+        $text = function ($str, $x, $y, $size, $color, $useBold = false, $align = 'left') use ($img, $bold, $regular, $hasFont) {
+            $img->text((string) $str, $x, $y, function ($f) use ($size, $color, $useBold, $align, $bold, $regular, $hasFont) {
+                if ($hasFont) { $f->file($useBold ? $bold : $regular); }
+                $f->size($size); $f->color($color); $f->align($align); $f->valign('top');
+            });
+        };
+        // Rounded rectangle: two rects and four corner discs.
+        $rrect = function ($x1, $y1, $x2, $y2, $r, $color) use ($img) {
+            $img->rectangle($x1 + $r, $y1, $x2 - $r, $y2, function ($d) use ($color) { $d->background($color); });
+            $img->rectangle($x1, $y1 + $r, $x2, $y2 - $r, function ($d) use ($color) { $d->background($color); });
+            foreach (array(array($x1 + $r, $y1 + $r), array($x2 - $r, $y1 + $r), array($x1 + $r, $y2 - $r), array($x2 - $r, $y2 - $r)) as $c) {
+                $img->circle($r * 2, $c[0], $c[1], function ($d) use ($color) { $d->background($color); });
+            }
+        };
+        // Shorten text to fit a pixel width.
+        $fit = function ($str, $size, $maxW, $useBold = false) use ($bold, $regular, $hasFont) {
+            $str = (string) $str;
+            if (!$hasFont || $str === '') { return mb_strimwidth($str, 0, 40, '…'); }
+            $font = $useBold ? $bold : $regular;
+            $width = function ($t) use ($size, $font) { $b = imagettfbbox($size * 0.75, 0, $font, $t); return abs($b[2] - $b[0]); };
+            if ($width($str) <= $maxW) { return $str; }
+            while (mb_strlen($str) > 1 && $width($str . '…') > $maxW) { $str = mb_substr($str, 0, -1); }
+            return rtrim($str) . '…';
+        };
+        $gradeColors = function ($g) {
+            $g = strtoupper(trim((string) $g));
+            if (in_array($g, array('O', 'A+'))) { return array('#dcfce7', '#15803d'); }
+            if (in_array($g, array('A', 'B+'))) { return array('#dbeafe', '#1d4ed8'); }
+            if (in_array($g, array('B', 'C', 'P'))) { return array('#fef3c7', '#b45309'); }
+            if (in_array($g, array('F', 'AB', 'ABSENT'))) { return array('#fee2e2', '#b91c1c'); }
+            return array('#f1f5f9', '#475569');
+        };
+        $num = function ($v, $dec = null) {
+            if ($v === null || $v === '') { return '—'; }
+            return $dec === null ? (string) (0 + $v) : number_format((float) $v, $dec);
+        };
+
+        // Header
+        $img->rectangle(0, 0, $W, 168, function ($d) use ($navy) { $d->background($navy); });
+        $img->rectangle(0, 0, $W, 6, function ($d) use ($blue) { $d->background($blue); });
+        $text('JNTU BOOKS', $pad, 48, 30, '#ffffff', true);
+        $text('Academic result card', $pad, 94, 19, '#94a3b8');
+        if ($verified) {
+            $rrect($right - 170, 50, $right, 94, 22, '#16a34a');
+            $text('✓ VERIFIED', $right - 85, 62, 17, '#ffffff', true, 'center');
+        } else {
+            $rrect($right - 190, 50, $right, 94, 22, '#f59e0b');
+            $text('UNVERIFIED', $right - 95, 62, 17, '#ffffff', true, 'center');
+        }
+        $text('Generated ' . date('d M Y'), $right, 112, 14, '#94a3b8', false, 'right');
+
+        // Watermark (drawn early so content sits on top of it)
+        for ($wy = 220; $wy < $H - 150; $wy += 210) {
+            for ($wx = -60; $wx < $W; $wx += 360) {
+                $img->text('JNTU BOOKS', $wx, $wy, function ($f) use ($bold, $hasFont) {
+                    if ($hasFont) { $f->file($bold); }
+                    $f->size(34); $f->color(array(15, 23, 42, 0.035)); $f->angle(30); $f->align('left'); $f->valign('top');
+                });
+            }
+        }
+
+        // Student
+        $y = 200;
+        $text($fit($result->student_name ?: 'Student', 34, $W - 2 * $pad, true), $pad, $y, 34, $ink, true);
+        $y += 52;
+        $details = array_filter(array(
+            $result->hall_ticket_no ? 'Hall ticket ' . $result->hall_ticket_no : '',
+            (string) $result->branch,
+            trim($result->degree . ' ' . $result->regulation),
+        ));
+        $text($fit(implode('   ·   ', $details), 19, $W - 2 * $pad), $pad, $y, 19, $ink2);
+        $y += 30;
+        $uni = $result->university_id ? \App\University::where('id', $result->university_id)->value('university_name') : '';
+        if ($uni) { $text($uni, $pad, $y, 17, $muted); }
+
+        // Headline tiles
+        $y = 330;
+        $gap = 16; $tileW = ($W - 2 * $pad - 3 * $gap) / 4; $tileH = 108;
+        $tiles = array(
+            array('CGPA', $num($result->current_cgpa, 2), '#eaf1ff', $blue),
+            array('CREDITS', $num($result->total_credits), '#f1f5f9', $ink),
+            array('BACKLOGS', (string) (int) $result->backlogs_count, (int) $result->backlogs_count > 0 ? '#fee2e2' : '#f1f5f9', (int) $result->backlogs_count > 0 ? '#b91c1c' : $ink),
+            array('SEMESTERS', (string) count($semData), '#f1f5f9', $ink),
+        );
+        foreach ($tiles as $i => $t) {
+            $x1 = (int) round($pad + $i * ($tileW + $gap)); $x2 = (int) round($x1 + $tileW);
+            $rrect($x1, $y, $x2, $y + $tileH, 14, $t[2]);
+            $text($t[1], $x1 + 20, $y + 18, 38, $t[3], true);
+            $text($t[0], $x1 + 20, $y + 72, 14, $muted, true);
+        }
+        $y += $tileH + 30;
+
+        // Semesters
+        $cols = array('code' => $pad + 16, 'subject' => $pad + 150, 'credits' => $right - 360, 'grade' => $right - 268, 'points' => $right - 176, 'result' => $right - 70);
+        foreach ($semData as $sd) {
+            $sem = $sd['sem']; $subs = $sd['subs'];
+            $text('Semester ' . $sem->sem_code, $pad, $y + 14, 23, $ink, true);
+            $meta = 'SGPA ' . $num($sem->sgpa) . '     Credits ' . $num($sem->credits_earned) . ($sem->exam_month_year ? '     ' . $sem->exam_month_year : '');
+            $text($meta, $right, $y + 18, 17, $muted, false, 'right');
+            $y += 60;
+
+            $img->rectangle($pad, $y, $right, $y + 34, function ($d) { $d->background('#f8fafc'); });
+            $img->line($pad, $y + 34, $right, $y + 34, function ($d) use ($line) { $d->color($line); });
+            $text('CODE', $cols['code'], $y + 10, 13, $muted, true);
+            $text('SUBJECT', $cols['subject'], $y + 10, 13, $muted, true);
+            $text('CREDITS', $cols['credits'], $y + 10, 13, $muted, true, 'center');
+            $text('GRADE', $cols['grade'], $y + 10, 13, $muted, true, 'center');
+            $text('POINTS', $cols['points'], $y + 10, 13, $muted, true, 'center');
+            $text('RESULT', $cols['result'], $y + 10, 13, $muted, true, 'center');
+            $y += 36;
+
+            if (count($subs) === 0) {
+                $text('No subjects entered', $cols['code'], $y + 14, 16, $muted);
+                $y += $rowH;
+            }
+            foreach ($subs as $k => $sub) {
+                $back = (int) $sub->is_backlog === 1;
+                if ($back) {
+                    $img->rectangle($pad, $y, $right, $y + $rowH, function ($d) { $d->background('#fff1f2'); });
+                } elseif ($k % 2 === 1) {
+                    $img->rectangle($pad, $y, $right, $y + $rowH, function ($d) { $d->background('#fbfcfe'); });
+                }
+                $gp = ($sub->grade_points !== null && $sub->grade_points !== '')
+                    ? (string) (0 + $sub->grade_points)
+                    : (function_exists('jntuh_subject_grade_points') ? (string) (0 + jntuh_subject_grade_points($sub->grade, $sub->credits)) : '—');
+                $text((string) $sub->subject_code, $cols['code'], $y + 14, 15, $ink2, true);
+                $text($fit($sub->subject_name, 15, $cols['credits'] - $cols['subject'] - 60), $cols['subject'], $y + 14, 15, $back ? '#b91c1c' : $ink);
+                $text($num($sub->credits), $cols['credits'], $y + 14, 15, $ink2, false, 'center');
+                $gc = $gradeColors($sub->grade);
+                $rrect($cols['grade'] - 26, $y + 9, $cols['grade'] + 26, $y + 37, 8, $gc[0]);
+                $text($sub->grade ?: '—', $cols['grade'], $y + 16, 15, $gc[1], true, 'center');
+                $text($gp, $cols['points'], $y + 14, 15, $ink2, false, 'center');
+                $text($back ? 'Backlog' : 'Pass', $cols['result'], $y + 14, 15, $back ? '#b91c1c' : '#15803d', true, 'center');
+                $img->line($pad, $y + $rowH, $right, $y + $rowH, function ($d) use ($line) { $d->color($line); });
+                $y += $rowH;
+            }
+            $y += 30;
+        }
+        if (empty($semData)) {
+            $text('No semesters entered yet.', $pad, $y + 20, 18, $muted);
+        }
+
+        // Footer
+        $fy = $H - 130;
+        $img->rectangle(0, $fy, $W, $H, function ($d) use ($navy) { $d->background($navy); });
+        $text('read.jntubooks.in', $pad, $fy + 30, 22, '#ffffff', true);
+        if ($result->source === 'jntuh') {
+            $source = 'Marks fetched from the JNTUH results service.';
+        } elseif ($verified) {
+            $source = 'Marks checked by the JNTU Books team.';
+        } else {
+            $source = 'Entered by the student on JNTU Books and not yet checked. Confirm at results.jntuh.ac.in';
+        }
+        $text($source, $pad, $fy + 70, 15, '#94a3b8');
+        $text('Not an official university document.', $pad, $fy + 94, 13, '#64748b');
+
+        return $img;
+    }
+}
+
 if (!function_exists('generate_result_report_card')) {
     /**
-     * Draw a watermarked PNG report card for a Result, upload to Spaces,
-     * write a report_cards row, and return the public URL (or null on error).
+     * Render the report card, upload the PNG to Spaces, record a report_cards
+     * row, and return the public URL (or null on error).
      *
      * @param  \App\Result $result
      * @return string|null
@@ -1551,161 +1751,7 @@ if (!function_exists('generate_result_report_card')) {
     function generate_result_report_card($result)
     {
         try {
-            $result->load('semesters');
-
-            $W = 1000;
-            $pad = 48;
-            $rowH = 40;
-            $verified = (int) $result->verified === 1;
-
-            $height = 300;
-            $semData = array();
-            foreach ($result->semesters as $sem) {
-                $subs = $sem->subjects()->get();
-                $semData[] = array('sem' => $sem, 'subs' => $subs);
-                $height += 70 + 44 + (max(count($subs), 1) * $rowH) + 24;
-            }
-            $height += 140;
-            $H = max($height, 700);
-
-            $font = null;
-            foreach (array(
-                public_path('admin_assets/fonts/cover-font.ttf'),
-                storage_path('fonts/cover-font.ttf'),
-                public_path('admin_assets/fonts/DejaVuSans-Bold.ttf'),
-            ) as $cand) {
-                if (file_exists($cand)) { $font = $cand; break; }
-            }
-
-            $img = \Image::canvas($W, $H, '#ffffff');
-
-            // Brand bar
-            $img->rectangle(0, 0, $W, 120, function ($d) { $d->background('#0d47a1'); });
-            $img->text('JNTU BOOKS', $pad, 46, function ($f) use ($font) {
-                if ($font) { $f->file($font); }
-                $f->size(40); $f->color('#ffffff'); $f->align('left'); $f->valign('top');
-            });
-            $img->text('Student Result Report Card', $pad, 92, function ($f) use ($font) {
-                if ($font) { $f->file($font); }
-                $f->size(20); $f->color('#bbdefb'); $f->align('left'); $f->valign('top');
-            });
-            if ($verified) {
-                $img->rectangle($W - 250, 40, $W - $pad, 88, function ($d) { $d->background('#2e7d32'); });
-                $img->text('VERIFIED', $W - 165, 52, function ($f) use ($font) {
-                    if ($font) { $f->file($font); }
-                    $f->size(22); $f->color('#ffffff'); $f->align('center'); $f->valign('top');
-                });
-            }
-
-            // Diagonal watermark baked into pixels
-            for ($y = 60; $y < $H; $y += 190) {
-                for ($x = -40; $x < $W; $x += 340) {
-                    $img->text('JNTU BOOKS', $x, $y, function ($f) use ($font) {
-                        if ($font) { $f->file($font); }
-                        $f->size(34); $f->color(array(13, 71, 161, 0.06)); $f->angle(30);
-                        $f->align('left'); $f->valign('top');
-                    });
-                }
-            }
-
-            // Summary block
-            $y = 150;
-            $line = function ($label, $val) use (&$y, $img, $font, $pad) {
-                $img->text($label, $pad, $y, function ($f) use ($font) {
-                    if ($font) { $f->file($font); }
-                    $f->size(18); $f->color('#555555'); $f->align('left'); $f->valign('top');
-                });
-                $img->text($val !== null && $val !== '' ? (string) $val : '-', $pad + 220, $y, function ($f) use ($font) {
-                    if ($font) { $f->file($font); }
-                    $f->size(18); $f->color('#111111'); $f->align('left'); $f->valign('top');
-                });
-                $y += 34;
-            };
-            $line('Name', $result->student_name);
-            $line('Hall Ticket No', $result->hall_ticket_no);
-            $line('Branch', $result->branch);
-            $line('Regulation', $result->regulation);
-            $line('Current CGPA', $result->current_cgpa);
-            $line('Total Credits', $result->total_credits);
-            $line('Pending Backlogs', $result->backlogs_count);
-            $y += 10;
-
-            // Semester tables
-            foreach ($semData as $sd) {
-                $sem = $sd['sem']; $subs = $sd['subs'];
-
-                $img->rectangle($pad, $y, $W - $pad, $y + 44, function ($d) { $d->background('#e3f2fd'); });
-                $semTitle = 'Semester ' . $sem->sem_code
-                          . ($sem->sgpa !== null ? '   |   SGPA: ' . $sem->sgpa : '')
-                          . ($sem->exam_month_year ? '   |   ' . $sem->exam_month_year : '');
-                $img->text($semTitle, $pad + 14, $y + 12, function ($f) use ($font) {
-                    if ($font) { $f->file($font); }
-                    $f->size(18); $f->color('#0d47a1'); $f->align('left'); $f->valign('top');
-                });
-                $y += 56;
-
-                $cols = array(
-                    array('Code', $pad + 14), array('Subject', $pad + 150),
-                    array('Cr', $W - 360), array('Grade', $W - 300),
-                    array('Points', $W - 210), array('Status', $W - 120),
-                );
-                foreach ($cols as $c) {
-                    $img->text($c[0], $c[1], $y, function ($f) use ($font) {
-                        if ($font) { $f->file($font); }
-                        $f->size(15); $f->color('#777777'); $f->align('left'); $f->valign('top');
-                    });
-                }
-                $y += 30;
-
-                if (count($subs) === 0) {
-                    $img->text('No subjects entered', $pad + 14, $y, function ($f) use ($font) {
-                        if ($font) { $f->file($font); }
-                        $f->size(15); $f->color('#999999'); $f->align('left'); $f->valign('top');
-                    });
-                    $y += $rowH;
-                } else {
-                    foreach ($subs as $sub) {
-                        $back = (int) $sub->is_backlog === 1;
-                        $rowColor = $back ? '#c62828' : '#111111';
-                        $gp = ($sub->grade_points !== null && $sub->grade_points !== '')
-                                ? (string) (0 + $sub->grade_points)
-                                : (function_exists('jntuh_subject_grade_points')
-                                    ? (string) (0 + jntuh_subject_grade_points($sub->grade, $sub->credits))
-                                    : '-');
-                        $vals = array(
-                            array((string) $sub->subject_code, $pad + 14),
-                            array(mb_strimwidth((string) $sub->subject_name, 0, 30, '…'), $pad + 150),
-                            array($sub->credits !== null ? (string) (0 + $sub->credits) : '-', $W - 360),
-                            array((string) $sub->grade, $W - 300),
-                            array($gp !== '' ? $gp : '-', $W - 210),
-                            array($back ? 'BACKLOG' : 'Pass', $W - 120),
-                        );
-                        foreach ($vals as $v) {
-                            $img->text($v[0], $v[1], $y, function ($f) use ($font, $rowColor) {
-                                if ($font) { $f->file($font); }
-                                $f->size(15); $f->color($rowColor); $f->align('left'); $f->valign('top');
-                            });
-                        }
-                        $y += $rowH;
-                    }
-                }
-                $y += 24;
-            }
-
-            // Footer
-            $fy = $H - 110;
-            $img->rectangle(0, $fy, $W, $H, function ($d) { $d->background('#0d47a1'); });
-            $img->text('read.jntubooks.in', $pad, $fy + 24, function ($f) use ($font) {
-                if ($font) { $f->file($font); }
-                $f->size(22); $f->color('#ffffff'); $f->align('left'); $f->valign('top');
-            });
-            $img->text('Unofficial — entered by student via JNTU Books. Verify at results.jntuh.ac.in',
-                $pad, $fy + 60, function ($f) use ($font) {
-                if ($font) { $f->file($font); }
-                $f->size(14); $f->color('#bbdefb'); $f->align('left'); $f->valign('top');
-            });
-
-            $binary   = (string) $img->encode('png');
+            $binary   = (string) render_result_report_card($result)->encode('png');
             $fileName = 'report_' . $result->id . '_' . time() . '.png';
             $key      = 'reports/' . $fileName;
 
@@ -1721,6 +1767,7 @@ if (!function_exists('generate_result_report_card')) {
 
             return $publicUrl;
         } catch (\Exception $e) {
+            \Log::warning('Report card generation failed for result ' . $result->id . ': ' . $e->getMessage());
             return null;
         }
     }
