@@ -100,7 +100,7 @@
                       </td>
                       <td>
                         <div class="bl-book">
-                          <a href="{{ url('admin/books/edit/'.$data->id) }}" class="bl-cover">@include('admin.partials.book_cover', ['book' => $data, 'class' => 'bl-cover-img'])</a>
+                          <a href="{{ url('admin/books/edit/'.$data->id) }}" class="bl-cover" style="display:block;width:44px;height:58px;overflow:hidden;border-radius:6px;">@include('admin.partials.book_cover', ['book' => $data, 'class' => 'bl-cover-img'])</a>
                           <div class="bl-info">
                             <a href="{{ url('admin/books/edit/'.$data->id) }}" class="bl-title" title="{{ stripslashes($data->title) }}">{{ stripslashes($data->title) }}</a>
                             @php $rt = \App\PostRatings::getPostTotalRatings($data->id,"Book"); @endphp
