@@ -47,7 +47,7 @@
                        <td>{{ \App\User::getUserFullname($data->user_id) }}</td>
                        <td>{{ stripslashes($data->title) }}</td>
                        <td>@if(isset($data->image)) <img src="{{URL::to('/upload/'.$data->image)}}" alt="image" class="thumb-md bdr_radius"> @endif</td>
-                       <td>{{ stripslashes($data->message) }}</td>
+                       <td class="wrap">{{ stripslashes($data->message) }}</td>
                        <td>{{ date('m-d-Y h:i a',$data->date) }}</td>
                      
                        </td>

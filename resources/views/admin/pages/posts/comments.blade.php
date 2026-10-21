@@ -25,7 +25,7 @@
                 @foreach($comments as $c)
                 <tr class="{{ $c->status?'':'table-secondary' }}">
                   <td>{{ \App\User::getUserInfo($c->user_id,'name') }}</td>
-                  <td>{{ stripslashes($c->comment) }}</td>
+                  <td class="wrap">{{ stripslashes($c->comment) }}</td>
                   <td>@if($c->status)<span class="badge badge-success">Visible</span>@else<span class="badge badge-secondary">Hidden</span>@endif</td>
                   <td style="white-space:nowrap;">
                     <a href="{{ URL::to('admin/posts/comment_toggle/'.$c->id) }}" class="btn btn-sm {{ $c->status?'btn-warning':'btn-success' }}">{{ $c->status?'Hide':'Show' }}</a>

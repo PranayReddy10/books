@@ -17,67 +17,46 @@
   <!-- App css -->
   
   <link href="{{ URL::asset('admin_assets/css/bootstrap.min.css') }}" rel="stylesheet" type="text/css" />
-  <link href="{{ URL::asset('admin_assets/css/icons.css') }}" rel="stylesheet" type="text/css" />
-  <link href="{{ URL::asset('admin_assets/css/style.css') }}" rel="stylesheet" type="text/css" />
   <link href="{{ URL::asset('admin_assets/css/font-awesome.min.css') }}" rel="stylesheet" type="text/css" />
-  <script src="{{ URL::asset('admin_assets/js/modernizr.min.js') }}"></script>
- 
-  <!-- SweetAlert2 -->
   <script src="{{ URL::asset('admin_assets/js/sweetalert2@11.js') }}"></script>
-  
+  @include("admin.partials.auth_style")
 </head>
 
 <body>
-  <div class="account-pages"></div>
-  <div class="clearfix"></div>
-  <div class="wrapper-page">
-    <div class="text-center">
-       
-      @if(getcong('admin_logo'))
-        <a class="navbar-brand" href="{{ URL::to('/admin') }}"> <img src="{{ URL::asset('/'.getcong('admin_logo')) }}" alt="Site Logo" width="150"> </a> 
-      @else
-        <a class="navbar-brand" href="{{ URL::to('/admin') }}"> <img src="{{ URL::asset('site_assets/images/logo.png') }}" alt="Site Logo"> </a>          
-      @endif
-     
-    </div>
-    <div class="m-t-20 card-box">
-      <div class="text-center">
-        <h3 class="text-uppercase font-bold m-b-0" style="color: #f9f9f9;">{{trans('words.forgot_pass')}}</h3>
- 
+  <div class="login-shell">
 
-      </div>
-      <div class="p-10">
-         {!! Form::open(array('url' => 'admin/forgot_password','class'=>'form-horizontal m-t-20','id'=>'loginform','role'=>'form')) !!}    
-          <div class="form-group">
-            <div class="col-xs-12">
-              <input name="email" class="form-control" type="text" required placeholder="{{trans('words.email')}}">
-            </div>
+    <div class="brand-panel">
+      <div class="logo"><span class="dot"></span> {{ getcong('app_name') ?: 'JNTU Books' }}</div>
+      <h1>Locked out? <span class="hl">We'll get you back in</span>.</h1>
+      <p>Enter the email on your admin account and we'll send you a link to set a new password.</p>
+    </div>
+
+    <div class="form-panel">
+      <div class="login-card">
+        @if(getcong('admin_logo'))
+          <img src="{{ URL::asset('/'.getcong('admin_logo')) }}" alt="Logo" class="card-logo">
+        @endif
+        <div class="kicker">Admin panel</div>
+        <h2>{{trans('words.forgot_pass')}}</h2>
+        <div class="sub">We'll email you a reset link.</div>
+
+        {!! Form::open(array('url' => 'admin/forgot_password','id'=>'loginform','role'=>'form')) !!}
+          <div class="fld">
+            <label>{{trans('words.email')}}</label>
+            <input name="email" type="text" required placeholder="you@example.com">
           </div>
-         
-          <div class="form-group text-center m-t-10">
-            <div class="col-xs-12">
-              <button class="btn btn-custom btn-bordred btn-block waves-effect waves-light" type="submit">{{trans('words.reset_password')}}</button>
-            </div>
-          </div>
-          <div class="form-group m-t-20 m-b-0 text-center">
-            <div class="col-sm-12"> <a href="{{ URL::to('admin/login') }}" class="text-muted"><i class="fa fa-unlock m-r-5"></i>
-                {{trans('words.login_text')}}</a> </div>
-          </div>
-           
-        {!! Form::close() !!} 
+          <button class="btn-login" type="submit">{{trans('words.reset_password')}}</button>
+        {!! Form::close() !!}
+
+        <a href="{{ URL::to('admin/login') }}" class="alt-link"><i class="fa fa-arrow-left"></i> Back to {{trans('words.login_text')}}</a>
       </div>
     </div>
+
   </div>
 
-  
   <script src="{{ URL::asset('admin_assets/js/jquery.min.js') }}"></script>
   <script src="{{ URL::asset('admin_assets/js/popper.min.js') }}"></script>
-  <script src="{{ URL::asset('admin_assets/js/bootstrap.min.js') }}"></script>  
-  
-
-  <!-- App js -->
-  <script src="{{ URL::asset('admin_assets/js/jquery.core.js') }}"></script>
-  <script src="{{ URL::asset('admin_assets/js/jquery.app.js') }}"></script>
+  <script src="{{ URL::asset('admin_assets/js/bootstrap.min.js') }}"></script>
 
   <script type="text/javascript">
 
@@ -130,9 +109,7 @@
         title: 'Oops...',
         html: '<p>@foreach ($errors->all() as $error) {{$error}}<br/> @endforeach</p>',
         showConfirmButton: true,
-        confirmButtonColor: '#10c469',
-        background:"#1a2234",
-        color:"#fff"
+        confirmButtonColor: '#2563eb'
         }) 
 @endif
 
