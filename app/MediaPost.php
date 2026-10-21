@@ -74,16 +74,17 @@ class MediaPost extends Model
     public function uploaderProfile()
     {
         if ($this->is_admin_upload || empty($this->user_id)) {
-            return ['image' => '', 'username' => '', 'college' => ''];
+            return ['image' => '', 'username' => '', 'college' => '', 'university' => ''];
         }
         $user = User::find($this->user_id);
         if (!$user) {
-            return ['image' => '', 'username' => '', 'college' => ''];
+            return ['image' => '', 'username' => '', 'college' => '', 'university' => ''];
         }
         return [
             'image'    => $user->user_image ? user_image_url($user->user_image) : '',
             'username' => (string) ($user->username ?: ''),
             'college'  => stripslashes((string) ($user->college ?: '')),
+            'university' => stripslashes((string) ($user->university ?: '')),
         ];
     }
 

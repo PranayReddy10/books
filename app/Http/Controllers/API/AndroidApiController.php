@@ -2354,6 +2354,7 @@ class AndroidApiController extends MainAPIController
                 'uploader_image'    => $profile['image'],
                 'uploader_username' => $profile['username'],
                 'uploader_college'  => $profile['college'],
+                'uploader_university' => $profile['university'],
                 'is_admin'       => $obj->is_admin_upload ? '1' : '0',
                 // feature toggles
                 'show_views'     => $obj->show_views ? '1' : '0',
