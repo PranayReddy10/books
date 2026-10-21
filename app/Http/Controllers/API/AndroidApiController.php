@@ -1991,6 +1991,9 @@ class AndroidApiController extends MainAPIController
             }
             $user->save();
 
+            // JNTU students: pull their results onto the new account.
+            \App\Services\StudentResults::syncAfterResponse($user->id);
+
             $response[] = array('msg' => trans('words.account_created_successfully'),'success'=>'1');
             return \Response::json(array(            
                 'EBOOK_APP' => $response,
@@ -3739,6 +3742,11 @@ class AndroidApiController extends MainAPIController
         }         
        
         $user_obj->save();
+
+        // A hall ticket or JNTU university just added: pull their results.
+        if ($user_obj->wasChanged('rollnumber') || $user_obj->wasChanged('university')) {
+            \App\Services\StudentResults::syncAfterResponse($user_obj->id);
+        }
 
         $user_id=$get_data['user_id'];    
         $user = User::findOrFail($user_id);
