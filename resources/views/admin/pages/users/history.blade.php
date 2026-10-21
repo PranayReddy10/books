@@ -35,6 +35,18 @@
 .uh .missing{ display:flex; gap:10px; align-items:flex-start; background:var(--ad-amber-soft); border:1px solid #f3dbb0; color:#92400e; border-radius:10px; padding:10px 12px; font-size:13px; margin-bottom:14px; }
 .uh .missing i{ margin-top:2px; }
 
+/* Results card */
+.uh .rc{ display:flex; align-items:center; gap:22px; flex-wrap:wrap; }
+.uh .rc-ico{ width:46px; height:46px; border-radius:12px; display:flex; align-items:center; justify-content:center; background:var(--ad-green-soft); color:var(--ad-green); font-size:20px; flex:0 0 46px; }
+.uh .rc-ico-muted{ background:var(--ad-surface-2); color:var(--ad-faint); }
+.uh .rc-main{ flex:1; min-width:220px; }
+.uh .rc-main h4{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.uh .rc-sub{ font-size:13px; color:var(--ad-muted); margin-top:4px; }
+.uh .rc-num{ text-align:center; min-width:70px; }
+.uh .rc-num b{ display:block; font-size:20px; color:var(--ad-ink); line-height:1.1; }
+.uh .rc-num span{ font-size:12px; color:var(--ad-muted); }
+.uh .rc-num.is-bad b{ color:var(--ad-red); }
+
 /* Tabs */
 .uh .tabs-panel{ padding:0; overflow:hidden; }
 .uh .tabs-panel .nav-tabs{ padding:0 18px; background:var(--ad-surface-2); }
@@ -62,6 +74,10 @@
       <div class="uh">
 
         <a href="{{ URL::to('admin/users') }}" class="btn btn-secondary btn-sm gap"><i class="fa fa-arrow-left"></i> All users</a>
+
+        @if(Session::has('flash_message'))
+          <div class="alert alert-info gap">{{ Session::get('flash_message') }}</div>
+        @endif
 
         {{-- Header --}}
         <div class="panel gap">
@@ -91,6 +107,7 @@
               <a href="{{ url('admin/users/edit/'.$user->id) }}" class="btn btn-primary"><i class="fa fa-pencil"></i> Edit</a>
               <a href="{{ url('admin/users/verify/'.$user->id) }}" class="btn btn-secondary" title="{{ $user->is_verified ? 'Uploads will need approval again' : 'Uploads go live without approval' }}"><i class="fa fa-check-circle"></i> {{ $user->is_verified ? 'Un-verify' : 'Verify' }}</a>
               <a href="{{ url('admin/coins/user/'.$user->id) }}" class="btn btn-secondary"><i class="fa fa-money"></i> Coins</a>
+              @if($result)<a href="{{ url('admin/results/view/'.$result->id) }}" class="btn btn-secondary"><i class="fa fa-graduation-cap"></i> Results</a>@endif
             </div>
           </div>
         </div>
@@ -103,6 +120,46 @@
           <div class="stat"><div class="stat-num">{{ $reviews_count }}</div><div class="stat-lbl">Reviews written</div></div>
           <div class="stat"><div class="stat-num">{{ number_format((int) $user->getAttribute('coin_balance')) }}</div><div class="stat-lbl">Coin balance</div></div>
           <div class="stat"><div class="stat-num">{{ $currency }} {{ number_format($total_spent, $total_spent == floor($total_spent) ? 0 : 2) }}</div><div class="stat-lbl">Total paid</div></div>
+        </div>
+
+        {{-- University results --}}
+        <div class="panel gap results-card">
+          @if($result)
+            <div class="rc">
+              <span class="rc-ico"><i class="fa fa-graduation-cap"></i></span>
+              <div class="rc-main">
+                <h4 style="margin:0;">University results
+                  @if($result->verified)<span class="badge badge-success"><i class="fa fa-check"></i> From {{ strtoupper($result->source ?: 'JNTUH') }}</span>@else<span class="badge badge-secondary">Entered manually</span>@endif
+                </h4>
+                <div class="rc-sub">Hall ticket {{ $result->hall_ticket_no }}@if($result->student_name) · {{ $result->student_name }}@endif @if($result->regulation) · {{ $result->regulation }}@endif</div>
+              </div>
+              <div class="rc-num"><b>{{ $result->current_cgpa !== null ? number_format((float) $result->current_cgpa, 2) : '—' }}</b><span>CGPA</span></div>
+              <div class="rc-num"><b>{{ $result->semesters()->count() }}</b><span>Semesters</span></div>
+              <div class="rc-num {{ (int) $result->backlogs_count > 0 ? 'is-bad' : '' }}"><b>{{ (int) $result->backlogs_count }}</b><span>Backlogs</span></div>
+              <a href="{{ url('admin/results/view/'.$result->id) }}" class="btn btn-primary">View results</a>
+            </div>
+          @else
+            <div class="rc">
+              <span class="rc-ico rc-ico-muted"><i class="fa fa-graduation-cap"></i></span>
+              <div class="rc-main">
+                <h4 style="margin:0;">University results</h4>
+                <div class="rc-sub">
+                  @if($results_pending)
+                    Waiting on the JNTUH results service for hall ticket {{ $user->rollnumber }}. They are checked every 5 minutes and will appear here.
+                  @elseif(!$user->rollnumber)
+                    No hall ticket on this account yet.
+                  @elseif(stripos((string) $user->university, 'JNTU') === false)
+                    Automatic results are only available for JNTU students.
+                  @else
+                    No results found for hall ticket {{ $user->rollnumber }} yet.
+                  @endif
+                </div>
+              </div>
+              @if($user->rollnumber && stripos((string) $user->university, 'JNTU') !== false)
+                <a href="{{ url('admin/users/sync_results/'.$user->id) }}" class="btn btn-secondary"><i class="fa fa-refresh"></i> Fetch now</a>
+              @endif
+            </div>
+          @endif
         </div>
 
         <div class="row">

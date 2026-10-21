@@ -30,6 +30,9 @@ class Kernel extends ConsoleKernel
         // $schedule->command('inspire')->hourly();
 
         $schedule->command('task:cron')->everyMinute();
+
+        // Students whose JNTU results were still being fetched at sign-up.
+        $schedule->command('results:sync-pending')->everyFiveMinutes()->withoutOverlapping();
     }
 
     /**

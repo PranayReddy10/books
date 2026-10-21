@@ -69,6 +69,9 @@ class RegisterController extends Controller
 
         $user = $this->create($request->all());
 
+        // JNTU students: pull their results onto the new account.
+        \App\Services\StudentResults::syncAfterResponse($user->id);
+
         Auth::login($user);
 
         return redirect($this->redirectTo);

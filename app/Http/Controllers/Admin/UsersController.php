@@ -272,6 +272,11 @@ class UsersController extends MainAdminController
          
         $user->status = $inputs['status'];
 	    $user->save(); 
+
+        if ($user->wasRecentlyCreated || $user->wasChanged('rollnumber') || $user->wasChanged('university')) {
+            \App\Services\StudentResults::syncAfterResponse($user->id);
+        }
+
 		
 		if(!empty($inputs['id'])){
 
@@ -365,6 +370,13 @@ class UsersController extends MainAdminController
            
            
           $total_spent = (float) Transactions::where('user_id',$user_id)->sum('payment_amount');
+
+          // University results linked to this account (imported at sign-up for JNTU students).
+          $result = \App\Result::where('user_id',$user_id)->first();
+          if (!$result && trim((string) $user->rollnumber) !== '') {
+              $result = \App\Result::where('hall_ticket_no', strtoupper(trim($user->rollnumber)))->first();
+          }
+          $results_pending = isset(\App\Services\StudentResults::pending()[$user_id]);
           $favourites_count = Favourite::where('user_id',$user_id)->count();
           $reviews_count = PostRatings::where('user_id',$user_id)->count();
 
@@ -374,11 +386,30 @@ class UsersController extends MainAdminController
               if (trim((string) $user->$col) === '') { $missing[] = $label; }
           }
 
-          return view('admin.pages.users.history',compact('page_title','user','transactions_list','uploaded_books','uploaded_posts','reading_history','total_spent','favourites_count','reviews_count','missing'));
+          return view('admin.pages.users.history',compact('page_title','user','transactions_list','uploaded_books','uploaded_posts','reading_history','total_spent','favourites_count','reviews_count','missing','result','results_pending'));
         
     }
 
      
+    /** Pull this student's JNTU results now instead of waiting for the retry. */
+    public function sync_results($id)
+    {
+        $user = User::findOrFail($id);
+        $state = (new \App\Services\StudentResults())->sync($user);
+
+        $messages = [
+            'ready'    => 'Results imported for ' . $user->rollnumber,
+            'linked'   => 'Results linked for ' . $user->rollnumber,
+            'queued'   => 'The university is still fetching ' . $user->rollnumber . '. It will be retried automatically.',
+            'conflict' => 'Hall ticket ' . $user->rollnumber . ' is already linked to another account.',
+            'skipped'  => 'Nothing to fetch: automatic results need a JNTU university and a valid hall ticket, and published marks.',
+            'error'    => 'Could not reach the results service. It will be retried automatically.',
+        ];
+        \Session::flash('flash_message', $messages[$state] ?? $state);
+
+        return redirect('admin/users/history/' . $user->id);
+    }
+
     public function user_export()    
     {
         if(Auth::User()->usertype!="Admin"){

@@ -143,6 +143,7 @@ Route::group(['namespace' => 'Admin', 'prefix' => 'admin'], function () {
     Route::get('posts/comment_delete/{id}', 'PostsController@comment_delete')->middleware('adminpermission:posts.delete');
 
     Route::get('users/verify/{id}', 'UsersController@verify_toggle')->middleware('adminpermission:users.verify');
+    Route::get('users/sync_results/{id}', 'UsersController@sync_results')->middleware('adminpermission:results.edit');
     Route::get('books/add', 'BooksController@add')->middleware('adminpermission:books.create'); 
     Route::get('books/edit/{id}', 'BooksController@edit')->middleware('adminpermission:books.edit');  
     Route::post('books/add_edit', 'BooksController@addnew')->middleware('adminpermission:books.create');
