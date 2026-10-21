@@ -2046,7 +2046,8 @@ class AndroidApiController extends MainAPIController
         $department_id= isset($get_data['department_id']) ? $get_data['department_id'] : null;
         $university= isset($get_data['university']) ? $get_data['university'] : '';
         $college= isset($get_data['college']) ? $get_data['college'] : '';
-        $rollnumber= isset($get_data['rollnumber']) ? $get_data['rollnumber'] : '';
+        // Hall tickets are stored in capitals, however they were typed.
+        $rollnumber= isset($get_data['rollnumber']) ? strtoupper(trim($get_data['rollnumber'])) : '';
         $gender= isset($get_data['gender']) ? $get_data['gender'] : '';
         // Filled from the hall-ticket lookup during sign-up, or typed by hand.
         $branch= isset($get_data['branch']) ? $get_data['branch'] : '';
@@ -3903,7 +3904,7 @@ class AndroidApiController extends MainAPIController
         // so letting it change would orphan this student's marks or point them
         // at somebody else's. Only fill it when the account has none yet.
         if (isset($get_data['rollnumber']) && trim((string) $user_obj->rollnumber) === '') {
-            $user_obj->rollnumber = $get_data['rollnumber'];
+            $user_obj->rollnumber = strtoupper(trim($get_data['rollnumber']));
         }
         if (isset($get_data['branch'])) {
             $user_obj->branch = $get_data['branch'];
