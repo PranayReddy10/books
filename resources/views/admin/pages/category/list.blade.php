@@ -46,6 +46,7 @@
 
                             <div class="card-body p-3">
                                 <h4 class="card-title mb-3">{{ stripslashes($data->category_name) }}</h4>
+                                @if(!empty($data->university_id))<span class="badge badge-info mb-2">{{ \App\University::where('id', $data->university_id)->value('university_name') }}</span>@endif
                                 
                                 <a href="{{ url('admin/category/edit/'.$data->id) }}" class="btn btn-icon waves-effect waves-light btn-success m-r-5" data-toggle="tooltip" title="{{trans('words.edit')}}"> <i class="fa fa-edit"></i> </a>
 

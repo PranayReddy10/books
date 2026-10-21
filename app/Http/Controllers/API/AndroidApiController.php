@@ -1605,6 +1605,12 @@ class AndroidApiController extends MainAPIController
         $all_query = Category::where('status',1);
         if (empty($get_data['all'])) {
             $all_query->whereIn('id', $this->visibleCategoryIds($get_data));
+        } elseif (Books::categoriesHaveUniversity() && viewer_university_id($get_data)) {
+            // Uploads still go only into the student's own university's categories.
+            $viewer_university = viewer_university_id($get_data);
+            $all_query->where(function ($q) use ($viewer_university) {
+                $q->whereNull('university_id')->orWhere('university_id', $viewer_university);
+            });
         }
         $data_list= $all_query->orderby($this->cat_by_name_id,$this->cat_order_by)->get();
         

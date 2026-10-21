@@ -43,6 +43,21 @@
                     </div>
                   </div>
 
+                  @if(\Schema::hasColumn('categories', 'university_id'))
+                  <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">University</label>
+                    <div class="col-sm-8">
+                      <select name="university_id" class="form-control">
+                        <option value="">All universities</option>
+                        @foreach(\App\University::orderBy('university_name')->get() as $uni)
+                          <option value="{{ $uni->id }}" @if(isset($info->university_id) && (int) $info->university_id === (int) $uni->id) selected @endif>{{ $uni->university_name }}</option>
+                        @endforeach
+                      </select>
+                      <small class="form-text text-muted">Students of other universities will not see this category or its books. Leave "All universities" for general ones like Text Books.</small>
+                    </div>
+                  </div>
+                  @endif
+
                   <div class="form-group row">
                     <label class="col-sm-3 col-form-label">{{trans('words.category_image')}}</label>
                     <div class="col-sm-8">

@@ -125,6 +125,9 @@ class CategoryController extends MainAdminController
          
  
          $data_obj->category_name = addslashes($inputs['category_name']);
+         if (\Schema::hasColumn('categories', 'university_id')) {
+             $data_obj->university_id = !empty($inputs['university_id']) ? (int) $inputs['university_id'] : null;
+         }
          $data_obj->category_image = $inputs['category_image'];       
 
          $data_obj->status = $inputs['status']; 
