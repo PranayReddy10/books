@@ -2336,6 +2336,7 @@ class AndroidApiController extends MainAPIController
             if ($current_user) {
                 $liked = MediaLike::where('post_id', $obj->id)->where('user_id', $current_user)->count() > 0 ? 1 : 0;
             }
+            $profile = $obj->uploaderProfile();
             $response[] = array(
                 'post_id'        => $obj->id,
                 'media_type'     => $obj->media_type,
@@ -2350,6 +2351,9 @@ class AndroidApiController extends MainAPIController
                 // still work off file_url, so older builds are unaffected.
                 'images'         => $obj->allImages(),
                 'uploaded_by'    => $obj->uploaderName(),
+                'uploader_image'    => $profile['image'],
+                'uploader_username' => $profile['username'],
+                'uploader_college'  => $profile['college'],
                 'is_admin'       => $obj->is_admin_upload ? '1' : '0',
                 // feature toggles
                 'show_views'     => $obj->show_views ? '1' : '0',
