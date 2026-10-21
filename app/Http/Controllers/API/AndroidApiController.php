@@ -1600,7 +1600,13 @@ class AndroidApiController extends MainAPIController
 
         $get_data=checkSignSalt($_POST['data']);
 
-        $data_list= Category::where('status',1)->whereIn('id', $this->visibleCategoryIds($get_data))->orderby($this->cat_by_name_id,$this->cat_order_by)->get();
+        // Upload Book asks for every category ("all" => 1): a student may upload
+        // into one that has no books yet. Browsing lists hide empty ones.
+        $all_query = Category::where('status',1);
+        if (empty($get_data['all'])) {
+            $all_query->whereIn('id', $this->visibleCategoryIds($get_data));
+        }
+        $data_list= $all_query->orderby($this->cat_by_name_id,$this->cat_order_by)->get();
         
         if(count($data_list) > 0)
         {
