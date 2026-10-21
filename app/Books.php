@@ -19,6 +19,41 @@ class Books extends Model
 	}
 
 	/**
+	 * Books a student of this university may see: books tagged with one of the
+	 * university's departments, plus books that are not tied to any university
+	 * (no department at all, or only departments without a university). A null
+	 * university leaves the query alone.
+	 */
+	public function scopeForUniversity($query, $universityId)
+	{
+		if (empty($universityId)) {
+			return $query;
+		}
+		$universityId = (int) $universityId;
+
+		return $query->whereNotExists(function ($other) use ($universityId) {
+			// Hidden only when every department it is tagged with belongs to
+			// some other university.
+			$other->selectRaw('1')
+				->from('book_department as bd')
+				->join('departments as d', 'd.id', '=', 'bd.department_id')
+				->whereColumn('bd.book_id', 'books.id')
+				->whereNotNull('d.university_id')
+				->where('d.university_id', '!=', $universityId)
+				->whereNotExists(function ($own) use ($universityId) {
+					$own->selectRaw('1')
+						->from('book_department as bd2')
+						->join('departments as d2', 'd2.id', '=', 'bd2.department_id')
+						->whereColumn('bd2.book_id', 'books.id')
+						->where(function ($q) use ($universityId) {
+							$q->where('d2.university_id', $universityId)
+								->orWhereNull('d2.university_id');
+						});
+				});
+		});
+	}
+
+	/**
 	 * Resolve a display cover for this row. Videos with no uploaded image fall
 	 * back to the YouTube thumbnail automatically.
 	 */

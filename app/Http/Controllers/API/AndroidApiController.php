@@ -76,6 +76,22 @@ class AndroidApiController extends MainAPIController
         
     }
       
+    /** Limit a Books query to what this student's university should see. */
+    private function forViewer($query, $get_data)
+    {
+        return $query->forUniversity(viewer_university_id($get_data));
+    }
+
+    /** Whether one book belongs in this student's lists (for id-driven rows). */
+    private function visibleToViewer($book_id, $get_data)
+    {
+        $university_id = viewer_university_id($get_data);
+        if (!$university_id) {
+            return true;
+        }
+        return Books::where('id', $book_id)->forUniversity($university_id)->exists();
+    }
+
     public function index()
     {   
           $response[] = array('msg' => "API",'success'=>'1'); 
@@ -247,7 +263,7 @@ class AndroidApiController extends MainAPIController
 
        $user_id= isset($get_data['user_id'])?$get_data['user_id']:"";
          
-        $featured_books= Books::where('status',1)->where('featured',1)->orderby($this->book_by_name_id,$this->book_order_by)->get();
+        $featured_books= $this->forViewer(Books::where('status',1)->where('featured',1), $get_data)->orderby($this->book_by_name_id,$this->book_order_by)->get();
 
         if(count($featured_books) >0)
         {
@@ -322,11 +338,15 @@ class AndroidApiController extends MainAPIController
 
         $trending_now = PostViewsDownload::select("post_id","post_type")->whereBetween('date', array(strtotime($trending_start_date), strtotime($trending_end_date)))->selectRaw('SUM(post_views) as total_views')->groupBy('post_id','post_type')->orderby('total_views','DESC')->take(getcong('trending_limit'))->get();
 
+        $response['trending_books'] = array();
         if(count($trending_now)>0) 
         {
             foreach($trending_now as $book_data)
             {   
                 $post_id= $book_data->post_id;
+                if (!$this->visibleToViewer($post_id, $get_data)) {
+                    continue;
+                }
                 $post_type="book";
                 $post_access= Books::getBookInfo($post_id,'book_access');
                 $post_title= Books::getBookInfo($post_id,'title');
@@ -368,7 +388,7 @@ class AndroidApiController extends MainAPIController
         
          
         $home_sections = HomeSections::where('status',1)->orderby('id')->get();
-        
+        $response['home_sections'] = array();
 
         foreach($home_sections as $sections_data)
         {   
@@ -440,8 +460,12 @@ class AndroidApiController extends MainAPIController
 
             if($sections_data->post_type=="book")
             {
+                $home_content4 = array();
                 foreach(explode(",",$sections_data->post_ids) as $author_data)
                 {
+                    if (!$this->visibleToViewer($author_data, $get_data)) {
+                        continue;
+                    }
                     $post_id=$author_data;
                     $post_type="book";
                     $post_access= Books::getBookInfo($post_id,'book_access');
@@ -478,7 +502,10 @@ class AndroidApiController extends MainAPIController
  
                 }
 
-                $response['home_sections'][]=array("home_id"=>$sections_data->id,"home_title"=>$sections_data->section_name,"home_type"=>$sections_data->post_type,"home_content"=>$home_content4);
+                // A row whose books all belong to other universities is left out.
+                if (!empty($home_content4)) {
+                    $response['home_sections'][]=array("home_id"=>$sections_data->id,"home_title"=>$sections_data->section_name,"home_type"=>$sections_data->post_type,"home_content"=>$home_content4);
+                }
 
                 unset($home_content4);
             }
@@ -486,7 +513,7 @@ class AndroidApiController extends MainAPIController
         }
         
         // Latest Books (most recent) — same shape as trending, for the home row.
-        $latest_books = Books::where('status',1)->orderby('id','DESC')->take(10)->get();
+        $latest_books = $this->forViewer(Books::where('status',1), $get_data)->orderby('id','DESC')->take(10)->get();
         if(count($latest_books) > 0)
         {
             foreach($latest_books as $lb)
@@ -628,8 +655,12 @@ class AndroidApiController extends MainAPIController
 
             if($sections_data->post_type=="book")
             {
+                $home_content4 = array();
                 foreach(explode(",",$sections_data->post_ids) as $author_data)
                 {
+                    if (!$this->visibleToViewer($author_data, $get_data)) {
+                        continue;
+                    }
                     $post_id=$author_data;
                     $post_type="book";
                     $post_access= Books::getBookInfo($post_id,'book_access');
@@ -666,6 +697,8 @@ class AndroidApiController extends MainAPIController
  
                 }
 
+                // "View all" for one row: keep the row, even if this student's
+                // university has none of its books.
                 $response['home_sections'][]=array("home_id"=>$sections_data->id,"home_title"=>$sections_data->section_name,"home_type"=>$sections_data->post_type,"home_content"=>$home_content4);
 
                 unset($home_content4);
@@ -740,11 +773,15 @@ class AndroidApiController extends MainAPIController
 
         $trending_now = PostViewsDownload::select("post_id","post_type")->whereBetween('date', array(strtotime($trending_start_date), strtotime($trending_end_date)))->selectRaw('SUM(post_views) as total_views')->groupBy('post_id','post_type')->orderby('total_views','DESC')->take(20)->get();
 
+        $response = array();
         if(count($trending_now)>0) 
         {
             foreach($trending_now as $book_data)
             {   
                 $post_id= $book_data->post_id;
+                if (!$this->visibleToViewer($post_id, $get_data)) {
+                    continue;
+                }
                 $post_type="book";
                 $post_access= Books::getBookInfo($post_id,'book_access');
                 $post_title= Books::getBookInfo($post_id,'title');
@@ -796,7 +833,7 @@ class AndroidApiController extends MainAPIController
         $get_data=checkSignSalt($_POST['data']);
 
         $latest_user_id = isset($get_data['user_id']) ? $get_data['user_id'] : '';
-        $latest_query = Books::where('status',1);
+        $latest_query = $this->forViewer(Books::where('status',1), $get_data);
         $latest_query = apply_department_priority($latest_query, $latest_user_id, 'id', 'DESC');
         $data_list= $latest_query->take(getcong('latest_limit'))->get();
  
@@ -907,7 +944,7 @@ class AndroidApiController extends MainAPIController
         {
             foreach($data_list as $obj_data)
             { 
-                $total_books= Books::where('sub_cat_id',$obj_data->id)->count();
+                $total_books= $this->forViewer(Books::where('sub_cat_id',$obj_data->id), $get_data)->count();
 
                 $response[]=array("post_id"=>$obj_data->id,"post_title"=>stripslashes($obj_data->sub_category_name),"post_image"=>\URL::to('/'.$obj_data->sub_category_image),"total_books"=>$total_books);
             }
@@ -965,11 +1002,11 @@ class AndroidApiController extends MainAPIController
         $cat_id=$get_data['cat_id'];
 
         $cat_user_id = isset($get_data['user_id']) ? $get_data['user_id'] : '';
-        $cat_query = Books::where('status',1)->where('cat_id',$cat_id);
+        $cat_query = $this->forViewer(Books::where('status',1)->where('cat_id',$cat_id), $get_data);
         $cat_query = apply_department_priority($cat_query, $cat_user_id, $this->book_by_name_id, $this->book_order_by);
         $data_list= $cat_query->paginate($this->pagination_limit);
 
-        $total_records=Books::where('status',1)->where('cat_id',$cat_id)->count();
+        $total_records=$this->forViewer(Books::where('status',1)->where('cat_id',$cat_id), $get_data)->count();
 
         if(count($data_list) > 0 AND $total_records > 0)
         {
@@ -1030,11 +1067,11 @@ class AndroidApiController extends MainAPIController
         $sub_cat_id=$get_data['sub_cat_id'];
 
         $subcat_user_id = isset($get_data['user_id']) ? $get_data['user_id'] : '';
-        $subcat_query = Books::where('status',1)->where('sub_cat_id',$sub_cat_id);
+        $subcat_query = $this->forViewer(Books::where('status',1)->where('sub_cat_id',$sub_cat_id), $get_data);
         $subcat_query = apply_department_priority($subcat_query, $subcat_user_id, $this->book_by_name_id, $this->book_order_by);
         $data_list= $subcat_query->paginate($this->pagination_limit);
 
-        $total_records=Books::where('status',1)->where('sub_cat_id',$sub_cat_id)->count();
+        $total_records=$this->forViewer(Books::where('status',1)->where('sub_cat_id',$sub_cat_id), $get_data)->count();
 
         if(count($data_list) > 0 AND $total_records > 0)
         {
@@ -1094,11 +1131,11 @@ class AndroidApiController extends MainAPIController
         $author_id=$get_data['author_id'];
 
         $author_user_id = isset($get_data['user_id']) ? $get_data['user_id'] : '';
-        $author_query = Books::where('status',1)->whereRaw("find_in_set('$author_id',author_ids)");
+        $author_query = $this->forViewer(Books::where('status',1)->whereRaw("find_in_set('$author_id',author_ids)"), $get_data);
         $author_query = apply_department_priority($author_query, $author_user_id, $this->book_by_name_id, $this->book_order_by);
         $data_list= $author_query->paginate($this->pagination_limit);
 
-        $total_records=Books::where('status',1)->whereRaw("find_in_set('$author_id',author_ids)")->count();
+        $total_records=$this->forViewer(Books::where('status',1)->whereRaw("find_in_set('$author_id',author_ids)"), $get_data)->count();
 
         if(count($data_list) > 0 AND $total_records > 0)
         {
@@ -1218,7 +1255,7 @@ class AndroidApiController extends MainAPIController
                 //Related Books
                 $cat_id=$obj_data->cat_id;
 
-                $related_data= Books::where('cat_id',$cat_id)->where('id','!=',$post_id)->take(5)->get();
+                $related_data= $this->forViewer(Books::where('cat_id',$cat_id)->where('id','!=',$post_id), $get_data)->take(5)->get();
 
                 if(count($related_data)>0)
                 {
@@ -1310,11 +1347,11 @@ class AndroidApiController extends MainAPIController
         //$type=isset($get_data['wall_type'])?$get_data['wall_type']:'';
         //$color_id=isset($get_data['color_id'])?$get_data['color_id']:''; 
          
-        $data_list= Books::where('status',1)->where('title','LIKE','%'.$search_text.'%');
+        $data_list= $this->forViewer(Books::where('status',1)->where('title','LIKE','%'.$search_text.'%'), $get_data);
         $search_user_id = isset($get_data['user_id']) ? $get_data['user_id'] : '';
         $data_list= apply_department_priority($data_list, $search_user_id, $this->book_by_name_id, $this->book_order_by)->paginate($this->pagination_limit);
         
-        $total_records=Books::where('status',1)->where('title','LIKE','%'.$search_text.'%')->count();
+        $total_records=$this->forViewer(Books::where('status',1)->where('title','LIKE','%'.$search_text.'%'), $get_data)->count();
 
         if(count($data_list) > 0 AND $total_records > 0)
         {
@@ -1401,9 +1438,9 @@ class AndroidApiController extends MainAPIController
             {   
                 //echo "test";exit;
                 //NewArrival
-                $book_list= Books::where('status',1)->orderby($this->book_by_name_id,$this->book_order_by)->paginate($this->pagination_limit);
+                $book_list= $this->forViewer(Books::where('status',1), $get_data)->orderby($this->book_by_name_id,$this->book_order_by)->paginate($this->pagination_limit);
 
-                $total_records=Books::where('status',1)->count();
+                $total_records=$this->forViewer(Books::where('status',1), $get_data)->count();
             }
         }
  
@@ -1411,14 +1448,14 @@ class AndroidApiController extends MainAPIController
         {   
             $author_id = explode(',',$filter_val); 
             //exit;
-           $book_list= Books::where('status',1)->where(function($query) use($author_id) {
+           $book_list= $this->forViewer(Books::where('status',1), $get_data)->where(function($query) use($author_id) {
                 foreach($author_id as $term) {
                     //$query->orWhere('author_ids', $term);
                     $query->orwhereRaw("find_in_set('$term',author_ids)");
                 };
             })->orderby($this->book_by_name_id,$this->book_order_by)->paginate($this->pagination_limit);
             
-            $total_records=Books::where('status',1)->where(function($query) use($author_id) {
+            $total_records=$this->forViewer(Books::where('status',1), $get_data)->where(function($query) use($author_id) {
                 foreach($author_id as $term) {
                     //$query->orWhere('author_ids', $term);
                     $query->orwhereRaw("find_in_set('$term',author_ids)");
@@ -1431,18 +1468,22 @@ class AndroidApiController extends MainAPIController
             //$category_id = explode(',',$filter_val);  
             $category_id = json_decode("[$filter_val]", true);               
 
-            $book_list= Books::where('status',1)->whereIn('cat_id',$category_id)->orderby($this->book_by_name_id,$this->book_order_by)->paginate($this->pagination_limit);
+            $book_list= $this->forViewer(Books::where('status',1)->whereIn('cat_id',$category_id), $get_data)->orderby($this->book_by_name_id,$this->book_order_by)->paginate($this->pagination_limit);
 
-            $total_records=Books::where('status',1)->whereIn('cat_id',$category_id)->count();
+            $total_records=$this->forViewer(Books::where('status',1)->whereIn('cat_id',$category_id), $get_data)->count();
         }
 
 
+            $response = array();
             if(isset($book_list) AND count($book_list) > 0)
             {
                 
                     foreach($book_list as $book_data)
                     { 
                         $post_id = $book_data->post_id?$book_data->post_id:$book_data->id;
+                        if (!$this->visibleToViewer($post_id, $get_data)) {
+                            continue;
+                        }
                          
                         $book_access= Books::getBookInfo($post_id,'book_access');
                         $cat_id= Books::getBookInfo($post_id,'cat_id');
