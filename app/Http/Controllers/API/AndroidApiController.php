@@ -82,6 +82,41 @@ class AndroidApiController extends MainAPIController
         return $query->forUniversity(viewer_university_id($get_data));
     }
 
+    /** Request-level memo for the category ids this student can see. */
+    private $visibleCategoryIds = null;
+    private $visibleSubCategoryIds = null;
+
+    /**
+     * Categories with at least one live book this student's university can
+     * see. Empty categories (for everyone, or just for this university) are
+     * left out of the lists.
+     */
+    private function visibleCategoryIds($get_data)
+    {
+        if ($this->visibleCategoryIds === null) {
+            $this->visibleCategoryIds = $this->forViewer(Books::where('status', 1), $get_data)
+                ->whereNotNull('cat_id')->distinct()->pluck('cat_id')->map('intval')->all();
+        }
+        return $this->visibleCategoryIds;
+    }
+
+    /** Same as visibleCategoryIds(), for sub-categories. */
+    private function visibleSubCategoryIds($get_data)
+    {
+        if ($this->visibleSubCategoryIds === null) {
+            $this->visibleSubCategoryIds = $this->forViewer(Books::where('status', 1), $get_data)
+                ->whereNotNull('sub_cat_id')->distinct()->pluck('sub_cat_id')->map('intval')->all();
+        }
+        return $this->visibleSubCategoryIds;
+    }
+
+    /** Sub-categories of a category this student can see books in. */
+    private function visibleSubCategoryCount($cat_id, $get_data)
+    {
+        return SubCategory::where('status', 1)->where('cat_id', $cat_id)
+            ->whereIn('id', $this->visibleSubCategoryIds($get_data))->count();
+    }
+
     /** Whether one book belongs in this student's lists (for id-driven rows). */
     private function visibleToViewer($book_id, $get_data)
     {
@@ -394,14 +429,18 @@ class AndroidApiController extends MainAPIController
         {   
             if($sections_data->post_type=="category")
             {
+                $home_content1 = array();
                 foreach(explode(",",$sections_data->post_ids) as $cat_data)
                 {
+                    if (!in_array((int) $cat_data, $this->visibleCategoryIds($get_data), true)) {
+                        continue;
+                    }
                     $post_id=$cat_data;
                     $post_type="category";
                     $post_title= Category::getCategoryInfo($cat_data,'category_name');
                     $post_image=\URL::to('/'.Category::getCategoryInfo($cat_data,'category_image'));
 
-                    $total_category= SubCategory::where('cat_id',$post_id)->count();
+                    $total_category= $this->visibleSubCategoryCount($post_id, $get_data);
 
                     if($total_category >0)
                     {
@@ -417,15 +456,21 @@ class AndroidApiController extends MainAPIController
  
                 }
 
-                $response['home_sections'][]=array("home_id"=>$sections_data->id,"home_title"=>$sections_data->section_name,"home_type"=>$sections_data->post_type,"home_content"=>$home_content1);
+                if (!empty($home_content1)) {
+                    $response['home_sections'][]=array("home_id"=>$sections_data->id,"home_title"=>$sections_data->section_name,"home_type"=>$sections_data->post_type,"home_content"=>$home_content1);
+                }
 
                 unset($home_content1);
             }
 
             if($sections_data->post_type=="subcategory")
             {
+                $home_content1 = array();
                 foreach(explode(",",$sections_data->post_ids) as $cat_data)
                 {
+                    if (!in_array((int) $cat_data, $this->visibleSubCategoryIds($get_data), true)) {
+                        continue;
+                    }
                     $post_id=$cat_data;
                     $post_type="subcategory";
                     $post_title= SubCategory::getSubCategoryInfo($cat_data,'sub_category_name');
@@ -435,7 +480,9 @@ class AndroidApiController extends MainAPIController
  
                 }
 
-                $response['home_sections'][]=array("home_id"=>$sections_data->id,"home_title"=>$sections_data->section_name,"home_type"=>$sections_data->post_type,"home_content"=>$home_content1);
+                if (!empty($home_content1)) {
+                    $response['home_sections'][]=array("home_id"=>$sections_data->id,"home_title"=>$sections_data->section_name,"home_type"=>$sections_data->post_type,"home_content"=>$home_content1);
+                }
 
                 unset($home_content1);
             }
@@ -589,14 +636,18 @@ class AndroidApiController extends MainAPIController
 
             if($sections_data->post_type=="category")
             {
+                $home_content1 = array();
                 foreach(explode(",",$sections_data->post_ids) as $cat_data)
                 {
+                    if (!in_array((int) $cat_data, $this->visibleCategoryIds($get_data), true)) {
+                        continue;
+                    }
                     $post_id=$cat_data;
                     $post_type="category";
                     $post_title= Category::getCategoryInfo($cat_data,'category_name');
                     $post_image=\URL::to('/'.Category::getCategoryInfo($cat_data,'category_image'));
 
-                    $total_category= SubCategory::where('cat_id',$post_id)->count();
+                    $total_category= $this->visibleSubCategoryCount($post_id, $get_data);
 
                     if($total_category >0)
                     {
@@ -619,8 +670,12 @@ class AndroidApiController extends MainAPIController
 
             if($sections_data->post_type=="subcategory")
             {
+                $home_content1 = array();
                 foreach(explode(",",$sections_data->post_ids) as $cat_data)
                 {
+                    if (!in_array((int) $cat_data, $this->visibleSubCategoryIds($get_data), true)) {
+                        continue;
+                    }
                     $post_id=$cat_data;
                     $post_type="subcategory";
                     $post_title= SubCategory::getSubCategoryInfo($cat_data,'sub_category_name');
@@ -892,15 +947,15 @@ class AndroidApiController extends MainAPIController
 
         $get_data=checkSignSalt($_POST['data']);
 
-        $data_list= Category::where('status',1)->orderby($this->cat_by_name_id,$this->cat_order_by)->paginate($this->pagination_limit);
+        $data_list= Category::where('status',1)->whereIn('id', $this->visibleCategoryIds($get_data))->orderby($this->cat_by_name_id,$this->cat_order_by)->paginate($this->pagination_limit);
         
-        $total_records=Category::where('status',1)->count();
+        $total_records=Category::where('status',1)->whereIn('id', $this->visibleCategoryIds($get_data))->count();
 
         if(count($data_list) > 0 AND $total_records > 0)
         {   
             foreach($data_list as $obj_data)
             { 
-                $total_category= SubCategory::where('cat_id',$obj_data->id)->count();
+                $total_category= $this->visibleSubCategoryCount($obj_data->id, $get_data);
 
                 if($total_category >0)
                 {
@@ -936,9 +991,9 @@ class AndroidApiController extends MainAPIController
 
         $cat_id=$get_data['cat_id'];
 
-        $data_list= SubCategory::where('status',1)->where('cat_id',$cat_id)->orderby($this->subcat_by_name_id,$this->subcat_order_by)->paginate($this->pagination_limit);
+        $data_list= SubCategory::where('status',1)->where('cat_id',$cat_id)->whereIn('id', $this->visibleSubCategoryIds($get_data))->orderby($this->subcat_by_name_id,$this->subcat_order_by)->paginate($this->pagination_limit);
 
-        $total_records=SubCategory::where('status',1)->where('cat_id',$cat_id)->count();
+        $total_records=SubCategory::where('status',1)->where('cat_id',$cat_id)->whereIn('id', $this->visibleSubCategoryIds($get_data))->count();
 
         if(count($data_list) > 0 AND $total_records > 0)
         {
@@ -1545,13 +1600,13 @@ class AndroidApiController extends MainAPIController
 
         $get_data=checkSignSalt($_POST['data']);
 
-        $data_list= Category::where('status',1)->orderby($this->cat_by_name_id,$this->cat_order_by)->get();
+        $data_list= Category::where('status',1)->whereIn('id', $this->visibleCategoryIds($get_data))->orderby($this->cat_by_name_id,$this->cat_order_by)->get();
         
         if(count($data_list) > 0)
         {
             foreach($data_list as $obj_data)
             { 
-                $total_category= SubCategory::where('cat_id',$obj_data->id)->count();
+                $total_category= $this->visibleSubCategoryCount($obj_data->id, $get_data);
 
                 if($total_category >0)
                 {
@@ -2244,6 +2299,17 @@ class AndroidApiController extends MainAPIController
         $type  = isset($get_data['media_type']) ? $get_data['media_type'] : ''; // '' = all
 
         $query = MediaPost::where('status', 1)->where('upload_status', 'approved');
+        // Students see their own university's posts, and admin posts.
+        $viewer_university = viewer_university_id($get_data);
+        if ($viewer_university) {
+            $university_name = \App\University::where('id', $viewer_university)->value('university_name');
+            $query->where(function ($q) use ($university_name) {
+                $q->whereNull('user_id')
+                    ->orWhere('user_id', 0)
+                    ->orWhere('is_admin_upload', 1)
+                    ->orWhereIn('user_id', User::where('university', $university_name)->select('id'));
+            });
+        }
         if (in_array($type, ['photo', 'video', 'text'])) {
             $query->where('media_type', $type);
         }
@@ -3249,8 +3315,12 @@ class AndroidApiController extends MainAPIController
         }
 
         // Already taken? Say so now rather than after the student fills the rest in.
-        $taken = Result::where('hall_ticket_no', $hall)->whereNotNull('user_id')->exists()
-            || User::where('rollnumber', $hall)->exists();
+        // A signed-in student looking up their own hall ticket (complete or edit
+        // profile) is not "taken".
+        $viewer = !empty($get_data['user_id']) ? $get_data['user_id']
+            : (!empty($get_data['viewer_id']) ? $get_data['viewer_id'] : 0);
+        $taken = Result::where('hall_ticket_no', $hall)->whereNotNull('user_id')->where('user_id', '!=', $viewer)->exists()
+            || User::where('rollnumber', $hall)->where('id', '!=', $viewer)->exists();
         if ($taken) {
             $response[] = array(
                 'state' => 'error',
@@ -3292,12 +3362,25 @@ class AndroidApiController extends MainAPIController
 
         $normalized = (new \App\Services\JntuhResultImporter())->normalize($out['data']);
 
+        // College and department as the app lists them, so it can pre-select
+        // them; the student can still change either.
+        $college_code = strtoupper(trim((string) $normalized['college_code']));
+        if (!preg_match('/^[A-Z0-9]{2}$/', $college_code)) {
+            $college_code = substr($hall, 2, 2);
+        }
+        $college_name = '';
+        if (\Schema::hasColumn('colleges', 'college_code')) {
+            $college_name = (string) \App\College::where('status', 1)->where('college_code', $college_code)->value('college_name');
+        }
+
         $response[] = array(
             'state'          => 'ready',
             'hall_ticket_no' => $hall,
             'student_name'   => (string) $normalized['student_name'],
             'father_name'    => (string) $normalized['father_name'],
-            'college_code'   => (string) $normalized['college_code'],
+            'college_code'   => $college_code,
+            'college_name'   => stripslashes($college_name),
+            'department_name'=> $this->departmentForBranch((string) $normalized['branch']),
             'branch'         => (string) $normalized['branch'],
             'regulation'     => (string) ($normalized['regulation'] ?: $this->regulationForHallTicket($hall)),
             'semester_count' => count($normalized['semesters']),
@@ -3320,6 +3403,54 @@ class AndroidApiController extends MainAPIController
             }
         }
         return true;
+    }
+
+    /**
+     * The department whose name matches a results-feed branch, or ''. Matches
+     * the full name ("Computer Science and Engineering"), its initials ("CSE"),
+     * or one name containing the other, among JNTU departments first.
+     */
+    protected function departmentForBranch($branch)
+    {
+        $branch = strtoupper(trim(preg_replace('/\s+/', ' ', (string) $branch)));
+        if ($branch === '') {
+            return '';
+        }
+        $jntu = \App\University::where('university_name', 'LIKE', '%JNTU%')->pluck('id')->all();
+        $departments = \App\Department::where('status', 1)
+            ->orderByRaw(empty($jntu) ? '0' : 'university_id IN (' . implode(',', array_map('intval', $jntu)) . ') DESC')
+            ->get(['department_name']);
+
+        $initials = function ($name) {
+            $letters = '';
+            foreach (preg_split('/[^A-Z]+/', strtoupper($name)) as $word) {
+                if ($word !== '' && !in_array($word, ['AND', 'OF', 'IN', 'THE'], true)) {
+                    $letters .= $word[0];
+                }
+            }
+            return $letters;
+        };
+        $branchLetters = preg_replace('/[^A-Z]/', '', $branch);
+
+        foreach ([1, 2, 3] as $pass) {
+            foreach ($departments as $d) {
+                $name = strtoupper(trim(stripslashes($d->department_name)));
+                if ($pass === 1 && $name === $branch) {
+                    return stripslashes($d->department_name);
+                }
+                // "ECE" for "Electronics and Communication": the E of an
+                // Engineering the department name leaves out.
+                if ($pass === 2 && $branchLetters !== ''
+                    && in_array($branchLetters, [$initials($name), $initials($name) . 'E'], true)) {
+                    return stripslashes($d->department_name);
+                }
+                if ($pass === 3 && strlen($branch) >= 4
+                    && (strpos($name, $branch) !== false || strpos($branch, $name) !== false)) {
+                    return stripslashes($d->department_name);
+                }
+            }
+        }
+        return '';
     }
 
     /**
