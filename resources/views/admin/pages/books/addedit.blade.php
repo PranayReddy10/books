@@ -35,17 +35,10 @@
                   
                  <input type="hidden" name="id" value="{{ isset($info->id) ? $info->id : null }}">
                   
-                 <div class="form-group row">
-                    <label class="col-sm-3 col-form-label">{{trans('words.book_access')}}</label>
-                      <div class="col-sm-8">
-                            <select class="form-control" name="book_access">
-                                <option value="Free" @if(isset($info->book_access) AND $info->book_access=='Free') selected @endif>{{trans('words.free')}}</option>                                
-                                <option value="Paid" @if(isset($info->book_access) AND $info->book_access=='Paid') selected @endif>{{trans('words.paid')}}</option>
-                            </select>
-                      </div>
-
-                  </div>
-
+                 <div class="row bf">
+                  <div class="col-xl-8 bf-main">
+                  <div class="bf-section">
+                    <div class="bf-head"><h4>Book details</h4><p>What students see on the book page.</p></div>
                   <div class="form-group row">
                     <label class="col-sm-3 col-form-label">{{trans('words.book_title')}}*</label>
                     <div class="col-sm-8">
@@ -60,103 +53,9 @@
                     </div>
                   </div>
 
-                  <div class="form-group row">
-                    <label class="col-sm-3 col-form-label">{{trans('words.category')}}*</label>
-                      <div class="col-sm-8">
-                            <select class="form-control select2" name="category" id="category_id">   
-                               <option value="">{{trans('words.select_category')}}</option>                            
-                              @foreach($cat_list as $cat_data)  
-                                <option value="{{$cat_data->id}}" @if(isset($info->id) AND $cat_data->id==$info->cat_id) selected @endif>{{$cat_data->category_name}}</option>
-                              @endforeach   
-                            </select>
-                      </div>
                   </div>
-
-                  <div class="form-group row">
-                    <label class="col-sm-3 col-form-label">{{trans('words.sub_category')}}*</label>
-                      <div class="col-sm-8">
-                            <select class="form-control select2" name="sub_category" id="sub_category_id">   
-                               <option value="">{{trans('words.select_sub_category')}}</option>   
-                               @if(isset($info->id))                           
-                                @foreach($sub_cat_list as $sub_cat_data)  
-                                  <option value="{{$sub_cat_data->id}}" @if(isset($info->id) AND $sub_cat_data->id==$info->sub_cat_id) selected @endif>{{$sub_cat_data->sub_category_name}}</option>
-                                @endforeach   
-                              @endif  
-                            </select>
-                      </div>
-                  </div>
-
-                  <div class="form-group row">
-                    <label class="col-sm-3 col-form-label">{{trans('words.authors_text')}}</label>
-                      <div class="col-sm-8">
-                            <select class="select2 select2-multiple" multiple name="author_ids[]" id="author_ids" data-placeholder="{{trans('words.select_author')}}">   
-                                                   
-                               @foreach($authors_list as $authors_data)
-                                  <option value="{{$authors_data->id}}" @if(isset($info->id) && in_array($authors_data->id, explode(",",$info->author_ids))) selected @endif>{{stripslashes($authors_data->name)}}</option>
-                                @endforeach
-                            </select>
-                      </div>
-                  </div>
-
-                  <div class="form-group row">
-                    <label class="col-sm-3 col-form-label">Departments</label>
-                      <div class="col-sm-8">
-                            <select class="select2 select2-multiple" multiple name="department_ids[]" id="department_ids" data-placeholder="Select Departments">
-
-                               @foreach($department_list as $department_data)
-                                  <option value="{{$department_data->id}}" @if(isset($selected_departments) && in_array($department_data->id, $selected_departments)) selected @endif>{{stripslashes($department_data->department_name)}}</option>
-                                @endforeach
-                            </select>
-                            <small class="form-text text-muted">A book can belong to multiple departments. Users see their department's books first.</small>
-                      </div>
-                  </div>
- 
-                  <div class="form-group row">
-                    <label class="col-sm-3 col-form-label">Upload specific image?</label>
-                    <div class="col-sm-8">
-                      <div class="radio radio-success form-check-inline pl-2" style="margin-top: 8px;">
-                          <input type="radio" id="useImgYes" value="1" name="use_custom_image" onclick="toggleBookImage()" @if(isset($info->id) && !empty($info->image)) checked @endif>
-                          <label for="useImgYes"> Yes </label>
-                      </div>
-                      <div class="radio form-check-inline" style="margin-top: 8px;">
-                          <input type="radio" id="useImgNo" value="0" name="use_custom_image" onclick="toggleBookImage()" @if(!isset($info->id) || empty($info->image)) checked @endif>
-                          <label for="useImgNo"> No (auto-generate cover) </label>
-                      </div>
-                      <small class="form-text text-muted">No = we create a cover using the category color and the book title (uploaded to DigitalOcean Spaces).</small>
-                    </div>
-                  </div>
-
-                  <div class="form-group row" id="book_image_row">
-                    <label class="col-sm-3 col-form-label">{{trans('words.book_image')}} </label>
-                    <div class="col-sm-8">
-                      <div class="input-group">
-                        <input type="text" name="book_image" id="book_image" value="{{ isset($info->image) ? stripslashes($info->image) : null }}" class="form-control" readonly>
-                        <div class="input-group-append">                           
-                          <button type="button" class="btn btn-dark waves-effect waves-light popup_selector" data-input="book_image" data-preview="holder_logo" data-inputid="book_image">Select</button>                        
-                        </div>
-                      </div>
-                      <small class="form-text text-muted">({{trans('words.recommended_resolution')}} : 240x365, 480x730, 720x1095 or Portrait Image)</small>
-                       
-                      <div style="margin-top:8px;">
-                        <label class="form-text text-muted mb-1">Or upload cover to DigitalOcean Spaces (optional &mdash; overrides the field above):</label>
-                        <input type="file" name="book_image_do" id="book_image_do" class="form-control" accept="image/*">
-                      </div>
-
-                      <div id="image_holder" style="margin-top:5px;max-height:100px;"></div>                     
-                    </div>
-                  </div>
-               
-                    
-
-                  @if(isset($info->image)) 
-                  <div class="form-group row">
-                    <label class="col-sm-3 col-form-label">&nbsp;</label>
-                    <div class="col-sm-8">                                                                         
-                      <img src="{{ book_asset_url($info->image) }}" alt="image" class="img-thumbnail" width="140">                                               
-                    </div>
-                  </div>
-                  @endif  
-
+                  <div class="bf-section">
+                    <div class="bf-head"><h4>Book file</h4><p>The PDF or EPUB students read, or a YouTube video.</p></div>
                   <div class="form-group row">
                     <label class="col-sm-3 col-form-label">Content Type</label>
                       <div class="col-sm-8">
@@ -232,6 +131,20 @@
                       </div>
                     </div>
                   </div>
+                  </div>
+                  <div class="bf-section">
+                    <div class="bf-head"><h4>Access &amp; reading</h4><p>Who can read it and how.</p></div>
+                 <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">{{trans('words.book_access')}}</label>
+                      <div class="col-sm-8">
+                            <select class="form-control" name="book_access">
+                                <option value="Free" @if(isset($info->book_access) AND $info->book_access=='Free') selected @endif>{{trans('words.free')}}</option>                                
+                                <option value="Paid" @if(isset($info->book_access) AND $info->book_access=='Paid') selected @endif>{{trans('words.paid')}}</option>
+                            </select>
+                      </div>
+
+                  </div>
+
                   <div class="form-group row">
                     <label class="col-sm-3 col-form-label">{{trans('words.download')}}</label>
                     <div class="col-sm-8">
@@ -261,8 +174,6 @@
                     </div>
                   </div>
 
-                  <hr/>
-                  <h4 class="m-t-0 m-b-30 header-title" style="font-size: 20px;">{{trans('words.book_on_rent')}}</h4>
                   <div class="form-group row">
                     <label class="col-sm-3 col-form-label">{{trans('words.book_on_rent')}}</label>
                       <div class="col-sm-8">
@@ -290,7 +201,11 @@
                       </div>
                   </div>
  
-                  <hr/>  
+                  </div>
+                  </div>
+                  <div class="col-xl-4 bf-side">
+                  <div class="bf-section bf-publish">
+                    <div class="bf-head"><h4>Publish</h4></div>
                   <div class="form-group row">
                     <label class="col-sm-3 col-form-label">{{trans('words.status')}}</label>
                       <div class="col-sm-8">
@@ -300,14 +215,116 @@
                             </select>
                       </div>
                   </div>
-                  <div class="form-group">
-                    <div class="offset-sm-3 col-sm-9 pl-1">
-                      <button type="submit" class="btn btn-primary waves-effect waves-light"> {{trans('words.save')}}</button>                      
+                    <div class="bf-publish-actions">
+                      <button type="submit" class="btn btn-primary btn-block"><i class="fa fa-check"></i> {{ isset($info->id) ? 'Save changes' : 'Publish book' }}</button>
                       @if(isset($info->id))
-                      <button type="button" class="btn btn-danger waves-effect waves-light book_delete_btn" data-id="{{ $info->id }}"><i class="fa fa-trash"></i> {{trans('words.delete')}}</button>
+                      <button type="button" class="btn btn-secondary btn-block book_delete_btn" data-id="{{ $info->id }}"><i class="fa fa-trash-o"></i> {{trans('words.delete')}}</button>
                       @endif
                     </div>
                   </div>
+                  <div class="bf-section">
+                    <div class="bf-head"><h4>Where it appears</h4><p>Books in a department come first for its students.</p></div>
+                  <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">{{trans('words.category')}}*</label>
+                      <div class="col-sm-8">
+                            <select class="form-control select2" name="category" id="category_id">   
+                               <option value="">{{trans('words.select_category')}}</option>                            
+                              @foreach($cat_list as $cat_data)  
+                                <option value="{{$cat_data->id}}" @if(isset($info->id) AND $cat_data->id==$info->cat_id) selected @endif>{{$cat_data->category_name}}</option>
+                              @endforeach   
+                            </select>
+                      </div>
+                  </div>
+
+                  <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">{{trans('words.sub_category')}}*</label>
+                      <div class="col-sm-8">
+                            <select class="form-control select2" name="sub_category" id="sub_category_id">   
+                               <option value="">{{trans('words.select_sub_category')}}</option>   
+                               @if(isset($info->id))                           
+                                @foreach($sub_cat_list as $sub_cat_data)  
+                                  <option value="{{$sub_cat_data->id}}" @if(isset($info->id) AND $sub_cat_data->id==$info->sub_cat_id) selected @endif>{{$sub_cat_data->sub_category_name}}</option>
+                                @endforeach   
+                              @endif  
+                            </select>
+                      </div>
+                  </div>
+
+                  <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">{{trans('words.authors_text')}}</label>
+                      <div class="col-sm-8">
+                            <select class="select2 select2-multiple" multiple name="author_ids[]" id="author_ids" data-placeholder="{{trans('words.select_author')}}">   
+                                                   
+                               @foreach($authors_list as $authors_data)
+                                  <option value="{{$authors_data->id}}" @if(isset($info->id) && in_array($authors_data->id, explode(",",$info->author_ids))) selected @endif>{{stripslashes($authors_data->name)}}</option>
+                                @endforeach
+                            </select>
+                      </div>
+                  </div>
+
+                  <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">Departments</label>
+                      <div class="col-sm-8">
+                            <select class="select2 select2-multiple" multiple name="department_ids[]" id="department_ids" data-placeholder="Select Departments">
+
+                               @foreach($department_list as $department_data)
+                                  <option value="{{$department_data->id}}" @if(isset($selected_departments) && in_array($department_data->id, $selected_departments)) selected @endif>{{stripslashes($department_data->department_name)}}</option>
+                                @endforeach
+                            </select>
+                            <small class="form-text text-muted">A book can belong to multiple departments. Users see their department's books first.</small>
+                      </div>
+                  </div>
+ 
+                  </div>
+                  <div class="bf-section">
+                    <div class="bf-head"><h4>Cover</h4></div>
+                  <div class="form-group row">
+                    <label class="col-sm-3 col-form-label">Upload specific image?</label>
+                    <div class="col-sm-8">
+                      <div class="radio radio-success form-check-inline pl-2" style="margin-top: 8px;">
+                          <input type="radio" id="useImgYes" value="1" name="use_custom_image" onclick="toggleBookImage()" @if(isset($info->id) && !empty($info->image)) checked @endif>
+                          <label for="useImgYes"> Yes </label>
+                      </div>
+                      <div class="radio form-check-inline" style="margin-top: 8px;">
+                          <input type="radio" id="useImgNo" value="0" name="use_custom_image" onclick="toggleBookImage()" @if(!isset($info->id) || empty($info->image)) checked @endif>
+                          <label for="useImgNo"> No (auto-generate cover) </label>
+                      </div>
+                      <small class="form-text text-muted">No = we create a cover using the category color and the book title (uploaded to DigitalOcean Spaces).</small>
+                    </div>
+                  </div>
+
+                  <div class="form-group row" id="book_image_row">
+                    <label class="col-sm-3 col-form-label">{{trans('words.book_image')}} </label>
+                    <div class="col-sm-8">
+                      <div class="input-group">
+                        <input type="text" name="book_image" id="book_image" value="{{ isset($info->image) ? stripslashes($info->image) : null }}" class="form-control" readonly>
+                        <div class="input-group-append">                           
+                          <button type="button" class="btn btn-dark waves-effect waves-light popup_selector" data-input="book_image" data-preview="holder_logo" data-inputid="book_image">Select</button>                        
+                        </div>
+                      </div>
+                      <small class="form-text text-muted">({{trans('words.recommended_resolution')}} : 240x365, 480x730, 720x1095 or Portrait Image)</small>
+                       
+                      <div style="margin-top:8px;">
+                        <label class="form-text text-muted mb-1">Or upload cover to DigitalOcean Spaces (optional &mdash; overrides the field above):</label>
+                        <input type="file" name="book_image_do" id="book_image_do" class="form-control" accept="image/*">
+                      </div>
+
+                      <div id="image_holder" style="margin-top:5px;max-height:100px;"></div>                     
+                    </div>
+                  </div>
+               
+                    
+
+                  @if(isset($info->id))
+                  <div class="bf-cover-preview">
+                    <span>Current cover</span>
+                    @include('admin.partials.book_cover', ['book' => $info, 'class' => 'bf-cover-img'])
+                  </div>
+                  @endif
+
+                  </div>
+                  </div>
+                 </div>
                 {!! Form::close() !!} 
 
                 @if(isset($info->id))
