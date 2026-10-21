@@ -1045,6 +1045,38 @@ if (!function_exists('get_user_department_id')) {
     }
 }
 
+if (!function_exists('viewer_university_id')) {
+    /**
+     * The university of the student making an app request, or null. The app
+     * sends the signed-in user as user_id (most calls) or viewer_id (all calls).
+     * Book lists use it to show only that university's books.
+     */
+    function viewer_university_id($get_data)
+    {
+        static $cache = [];
+
+        $user_id = '';
+        if (!empty($get_data['user_id'])) {
+            $user_id = $get_data['user_id'];
+        } elseif (!empty($get_data['viewer_id'])) {
+            $user_id = $get_data['viewer_id'];
+        }
+        if ($user_id === '' || !is_numeric($user_id)) {
+            return null;
+        }
+        if (array_key_exists($user_id, $cache)) {
+            return $cache[$user_id];
+        }
+
+        $university = \App\User::where('id', $user_id)->value('university');
+        $id = null;
+        if (!empty($university)) {
+            $id = \App\University::where('university_name', $university)->value('id');
+        }
+        return $cache[$user_id] = $id ? (int) $id : null;
+    }
+}
+
 if (!function_exists('apply_department_priority')) {
     /**
      * Apply a soft "department first" ordering to a Books query builder.
